@@ -1146,15 +1146,18 @@ void printtoSAM(){
         threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
        // parallelmapping.print();
 
-    auto recalculateAlignmentScorefk=[&](AlignerArguments* aa, Cigar* c){
+    auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
+            StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
+            
+
         int refPos = 0, altPos = 0;
-        for (const auto & cigarEntry : cigarEntries) {
-            auto basesLeft = std::min(aa->query.size() - std::max(refPos, altPos), cigarEntry.second);
+        for (const auto  & cigarEntry : cig) {
+            auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
         switch (cigarEntry.first) {
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
-                if (ref[refPos + i] == alt[altPos + i] || ref[refPos + i] == WILDCARD_NUCLEOTIDE
-                    || alt[altPos + i] == WILDCARD_NUCLEOTIDE)
+                if (aa.ref[refPos + i] == aa.query[altPos + i] || aa.ref[refPos + i] == WILDCARD_NUCLEOTIDE
+                    || aa.query[altPos + i] == WILDCARD_NUCLEOTIDE)
                     continue;
                 //TODO
             }
@@ -1187,8 +1190,8 @@ void printtoSAM(){
 
         case Cigar::Op::Mismatch:
         for (int i = 0; i < basesLeft; ++i) {
-                if (ref[refPos + i] == alt[altPos + i] || ref[refPos + i] == WILDCARD_NUCLEOTIDE
-                    || alt[altPos + i] == WILDCARD_NUCLEOTIDE)
+                if (aa.ref[refPos + i] == aa.query[altPos + i] || aa.ref[refPos + i] == WILDCARD_NUCLEOTIDE
+                    || aa.query[altPos + i] == WILDCARD_NUCLEOTIDE)
                     continue;
                 //TODO
             }
@@ -1205,6 +1208,7 @@ void printtoSAM(){
             assert(false && "Unhandled CIGAR operation");
             break;
         }
+        }
 
      };
         auto compfk=[&](auto begin, auto end, int /*threadid*/){
@@ -1215,10 +1219,10 @@ void printtoSAM(){
                 Cigar cigiii{mappingout.at(i).alignments.at(2).cigar_string};
                 Cigar cigiv{mappingout.at(i).alignments.at(3).cigar_string};
                 
-                recalculateAlignmentScorefk(&mappingout.at(i), &cigi);
-                recalculateAlignmentScorefk(&mappingout.at(i), &cigii);
-                recalculateAlignmentScorefk(&mappingout.at(i), &cigiii);
-                recalculateAlignmentScorefk(&mappingout.at(i), &cigiv);
+                recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
+                recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+                recalculateAlignmentScorefk(mappingout.at(i), cigiii.getEntries(), 2);
+                recalculateAlignmentScorefk(mappingout.at(i), cigiv.getEntries(), 3);
             
             }
         };
