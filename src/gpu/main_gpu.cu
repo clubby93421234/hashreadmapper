@@ -1215,10 +1215,10 @@ void printtoSAM(){
                 Cigar cigiii{mappingout.at(i).alignments.at(2).cigar_string};
                 Cigar cigiv{mappingout.at(i).alignments.at(3).cigar_string};
                 
-                helperfk(&mappingout.at(i), &cigi);
-                helperfk(&mappingout.at(i), &cigii);
-                helperfk(&mappingout.at(i), &cigiii);
-                helperfk(&mappingout.at(i), &cigiv);
+                recalculateAlignmentScorefk(&mappingout.at(i), &cigi);
+                recalculateAlignmentScorefk(&mappingout.at(i), &cigii);
+                recalculateAlignmentScorefk(&mappingout.at(i), &cigiii);
+                recalculateAlignmentScorefk(&mappingout.at(i), &cigiv);
             
             }
         };
