@@ -1147,9 +1147,9 @@ void printtoSAM(){
        // parallelmapping.print();
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
+
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
             
-
         int refPos = 0, altPos = 0;
         for (const auto  & cigarEntry : cig) {
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
@@ -1208,10 +1208,11 @@ void printtoSAM(){
             assert(false && "Unhandled CIGAR operation");
             break;
         }
+
         }
 
      };
-        auto compfk=[&](auto begin, auto end, int /*threadid*/){
+        auto comparefk=[&](auto begin, auto end, int /*threadid*/){
             for(auto i=begin; i< end; i++){
                 
                 Cigar cigi{mappingout.at(i).alignments.at(0).cigar_string};
@@ -1226,7 +1227,7 @@ void printtoSAM(){
             
             }
         };
-    threadPool.parallelFor(pforHandle, start , mappingout.size() ,compfk);
+    threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
  
  
     printtoSAM();
@@ -1768,6 +1769,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
         gpuReadStorage,
         gpuMinhasher,
         &programOptions,
+        //results_rc_3n.data(),
         results.data(),
         windowHitStatsAfterHashingPtr,
         windowHitStatsAfterHammingDistancePtr
@@ -1787,7 +1789,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
        
         
     };
-    
+    //do it with rc_3n too
     genome.forEachBatchOfWindows(
         programOptions.kmerlength,
         programOptions.windowSize,
