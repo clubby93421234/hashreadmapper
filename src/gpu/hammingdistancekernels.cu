@@ -198,7 +198,8 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                 if(isReverseComplement) {
                     SequenceHelpers::reverseComplementSequenceInplace2BitHiLo(mySharedCandidate, candidateLength, block_transposed_index);
                 }
-
+                //TODO add nucleotide conversion
+                NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
                 //save anchor in shared memory
                 for(int i = 0; i < anchorints; i++) {
                     mySharedAnchor[block_transposed_index(i)] = anchorptr[i * numAnchors];

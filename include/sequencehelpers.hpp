@@ -506,6 +506,17 @@
             return ~n;
         };
 
+        HD_WARNING_DISABLE
+        template<class IndexTransformation>
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr void NucleotideConverterInplace2Bit_CtoT(unsigned int* encodedsequence, int sequenceLength, IndexTransformation indextrafo) noexcept{
+            const int ints = getEncodedNumInts2BitHiLo(sequenceLength);
+            for (int i=0; i<ints; ++i){
+                if( encodedsequence[indextrafo(i)] == encodedbaseC() ){
+                    encodedsequence[indextrafo(i)]=encodedbaseT();
+                }
+            }
+        }
 
         HD_WARNING_DISABLE
         template<class IndexTransformation>
