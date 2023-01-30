@@ -420,6 +420,7 @@ struct WindowBatchProcessor{
     const gpu::GpuMinhasher* gpuMinhasher;
     const ProgramOptions* programOptions;
     MappedRead* results;
+    MappedRead* resultsRC;
     WindowHitStatisticCollector* windowHitStatsAfterHashing;
     WindowHitStatisticCollector* windowHitStatsAfterHammingDistance;
 
@@ -431,12 +432,14 @@ struct WindowBatchProcessor{
         const gpu::GpuMinhasher* gpuMinhasher_,
         const ProgramOptions* programOptions_,
         MappedRead* results_,
+        MappedRead* resultsRC_,
         WindowHitStatisticCollector* windowHitStatsAfterHashing_,
         WindowHitStatisticCollector* windowHitStatsAfterHammingDistance_
     ) : gpuReadStorage(gpuReadStorage_),
         gpuMinhasher(gpuMinhasher_),
         programOptions(programOptions_),
         results(results_),
+        resultsRC(resultsRC_),
         windowHitStatsAfterHashing(windowHitStatsAfterHashing_),
         windowHitStatsAfterHammingDistance(windowHitStatsAfterHammingDistance_),
         minhashHandle(gpuMinhasher->makeMinhasherHandle()),
@@ -463,6 +466,7 @@ struct WindowBatchProcessor{
 
         //Next step: transfer windows to gpu
         nvtx::push_range("transfer windows to gpu", 0);
+        //for 3N-Genome
         rmm::device_uvector<int> d_windowLengths(batch.numWindows, stream, mr);
         CUDACHECK(cudaMemcpyAsync(
             d_windowLengths.data(),
@@ -471,19 +475,44 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
-
+        //for RC-3N-Genome
+        rmm::device_uvector<int> d_windowLengths_RC(batch.numWindows, stream, mr);
+        CUDACHECK(cudaMemcpyAsync(
+            d_windowLengths_RC.data(),
+            batch.windowLengths.data(),
+            sizeof(int) * batch.numWindows,
+            H2D,
+            stream
+        ));
         rmm::device_uvector<char> d_windowsDecoded(decodedWindowPitchInBytes * batch.numWindows, stream, mr);
-        std::vector<char> h_windowsDecoded(decodedWindowPitchInBytes * batch.numWindows);        
+        std::vector<char> h_windowsDecoded(decodedWindowPitchInBytes * batch.numWindows);    
+
+        rmm::device_uvector<char> d_windowsDecoded_RC(decodedWindowPitchInBytes * batch.numWindows, stream, mr);
+        std::vector<char> h_windowsDecoded_RC(decodedWindowPitchInBytes * batch.numWindows);            
         for(int w = 0; w < batch.numWindows; w++){
             std::copy(
                 batch.windowsDecoded[w].begin(), 
                 batch.windowsDecoded[w].end(),
                 h_windowsDecoded.data() + w * decodedWindowPitchInBytes
             );
+            std::copy(
+                batch.windowsDecoded[w].begin(), 
+                batch.windowsDecoded[w].end(),
+                h_windowsDecoded_RC.data() + w * decodedWindowPitchInBytes
+            );
         }
+        //TODO do Nucleotide conversion here
         CUDACHECK(cudaMemcpyAsync(
             d_windowsDecoded.data(),
             h_windowsDecoded.data(),
+            sizeof(char) * decodedWindowPitchInBytes * batch.numWindows,
+            H2D,
+            stream
+        ));
+        //TODO do RC and then NC
+         CUDACHECK(cudaMemcpyAsync(
+            d_windowsDecoded_RC.data(),
+            h_windowsDecoded_RC.data(),
             sizeof(char) * decodedWindowPitchInBytes * batch.numWindows,
             H2D,
             stream
@@ -593,7 +622,7 @@ struct WindowBatchProcessor{
         #else
         //use global maximum of all reads in dataset
         const int maxReadLength = gpuReadStorage->getSequenceLengthUpperBound();
-        //std::cout<<"hello from main line 594"<<std::endl;
+        
         #endif
        
         const int maxExtendedWindowLength = batch.maxWindowSize + maxReadLength;  
@@ -729,7 +758,7 @@ struct WindowBatchProcessor{
         for(int wid = 0, offset = 0; wid < batch.numWindows; wid++){
             
             const int numReadsOfWindow = hostIds.h_numReadIdsPerSequence[wid];
-
+//TODO: #1 upload resultsRC as results
             for(int r = 0; r < numReadsOfWindow; r++){
                 MappedRead currentResult;
                 currentResult.orientation = shdResultHost.h_alignment_orientation[offset + r];
@@ -1762,15 +1791,16 @@ void performMappingGpu(const ProgramOptions& programOptions){
     std::size_t processedWindowCount = 0;
     std::size_t processedWindowCountProgress = 0;
 
-    //results
+    //results for 3n genome
     std::vector<MappedRead> results(multiGpuReadStorage.getNumberOfReads());
-
+    //results for rc 3n genome
+    std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
     WindowBatchProcessor windowBatchProcessor(
         gpuReadStorage,
         gpuMinhasher,
         &programOptions,
-        //results_rc_3n.data(),
         results.data(),
+        resultsRC.data(),
         windowHitStatsAfterHashingPtr,
         windowHitStatsAfterHammingDistancePtr
     );
@@ -1789,7 +1819,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
        
         
     };
-    //do it with rc_3n too
+    
     genome.forEachBatchOfWindows(
         programOptions.kmerlength,
         programOptions.windowSize,
