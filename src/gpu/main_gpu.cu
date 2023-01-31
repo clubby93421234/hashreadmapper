@@ -97,6 +97,9 @@ struct SimilarReadIdsHost{
     std::vector<read_number> h_readIds{};
     std::vector<int> h_numReadIdsPerSequence{};
     std::vector<int> h_numReadIdsPerSequencePrefixSum{};
+    std::vector<read_number> h_readIds_RC{};
+    std::vector<int> h_numReadIdsPerSequence_RC{};
+    std::vector<int> h_numReadIdsPerSequencePrefixSum_RC{};
 };
 
 struct SimilarReadIdsDevice{
@@ -113,7 +116,10 @@ struct SimilarReadIdsDevice{
         totalNumReadIds(0),
         d_readIds(0, stream, mr),
         d_numReadIdsPerSequence(size, stream, mr),
-        d_numReadIdsPerSequencePrefixSum(size + 1, stream, mr){
+        d_numReadIdsPerSequencePrefixSum(size + 1, stream, mr),
+        d_readIds_RC(0, stream, mr),
+        d_numReadIdsPerSequence_RC(size, stream, mr),
+        d_numReadIdsPerSequencePrefixSum_RC(size + 1, stream, mr){
     }
 
     SimilarReadIdsHost copyToHost(cudaStream_t stream) const{
@@ -123,6 +129,9 @@ struct SimilarReadIdsDevice{
         result.h_readIds.resize(totalNumReadIds);
         result.h_numReadIdsPerSequence.resize(numSequences);
         result.h_numReadIdsPerSequencePrefixSum.resize(numSequences + 1);
+        result.h_readIds_RC.resize(totalNumReadIds);
+        result.h_numReadIdsPerSequence_RC.resize(numSequences);
+        result.h_numReadIdsPerSequencePrefixSum_RC.resize(numSequences + 1);
         CUDACHECK(cudaMemcpyAsync(
             result.h_readIds.data(),
             d_readIds.data(),
@@ -144,6 +153,27 @@ struct SimilarReadIdsDevice{
             D2H,
             stream
         ));
+        CUDACHECK(cudaMemcpyAsync(
+            result.h_readIds_RC.data(),
+            d_readIds_RC.data(),
+            sizeof(read_number) * totalNumReadIds,
+            D2H,
+            stream
+        ));
+        CUDACHECK(cudaMemcpyAsync(
+            result.h_numReadIdsPerSequence_RC.data(),
+            d_numReadIdsPerSequence_RC.data(),
+            sizeof(int) * numSequences,
+            D2H,
+            stream
+        ));
+        CUDACHECK(cudaMemcpyAsync(
+            result.h_numReadIdsPerSequencePrefixSum_RC.data(),
+            d_numReadIdsPerSequencePrefixSum_RC.data(),
+            sizeof(int) * (numSequences + 1),
+            D2H,
+            stream
+        ));
         CUDACHECK(cudaStreamSynchronize(stream));
         return result;
     }
@@ -153,6 +183,10 @@ struct SimilarReadIdsDevice{
     rmm::device_uvector<read_number> d_readIds;
     rmm::device_uvector<int> d_numReadIdsPerSequence;
     rmm::device_uvector<int> d_numReadIdsPerSequencePrefixSum;
+
+    rmm::device_uvector<read_number> d_readIds_RC;
+    rmm::device_uvector<int> d_numReadIdsPerSequence_RC;
+    rmm::device_uvector<int> d_numReadIdsPerSequencePrefixSum_RC;
 };
 
 //query hashtables
@@ -502,6 +536,8 @@ struct WindowBatchProcessor{
             );
         }
         //TODO do Nucleotide conversion here
+ 
+        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         CUDACHECK(cudaMemcpyAsync(
             d_windowsDecoded.data(),
             h_windowsDecoded.data(),
@@ -510,6 +546,8 @@ struct WindowBatchProcessor{
             stream
         ));
         //TODO do RC and then NC
+        SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded_RC, h_windowsDecoded_RC.size());
+        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded_RC, h_windowsDecoded.size());
          CUDACHECK(cudaMemcpyAsync(
             d_windowsDecoded_RC.data(),
             h_windowsDecoded_RC.data(),
@@ -523,11 +561,21 @@ struct WindowBatchProcessor{
         //Next step: 2bit encode windows, and query hash tables
         nvtx::push_range("find candidate reads for windows", 1);
         rmm::device_uvector<unsigned int> d_windowsEncoded2Bit(batch.numWindows * encodedWindowPitchInInts, stream, mr);
-        
+        rmm::device_uvector<unsigned int> d_windowsEncoded2Bit_RC(batch.numWindows * encodedWindowPitchInInts, stream, mr);
         callEncodeSequencesTo2BitKernel(
             d_windowsEncoded2Bit.data(),
             d_windowsDecoded.data(),
             d_windowLengths.data(),
+            decodedWindowPitchInBytes,
+            encodedWindowPitchInInts,
+            batch.numWindows,
+            8, //cg::groupsize per sequence
+            stream
+        );
+        callEncodeSequencesTo2BitKernel(
+            d_windowsEncoded2Bit_RC.data(),
+            d_windowsDecoded_RC.data(),
+            d_windowLengths_RC.data(),
             decodedWindowPitchInBytes,
             encodedWindowPitchInInts,
             batch.numWindows,

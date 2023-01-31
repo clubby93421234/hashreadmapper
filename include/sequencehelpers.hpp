@@ -95,6 +95,21 @@
                 sequence[middleindex] = complementBaseDecoded(sequence[middleindex]);
             }
         }
+        HD_WARNING_DISABLE
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr void reverseComplementSequenceDecodedInplaceVector(std::vector<char>* vec, int vectorlength) noexcept{
+            for(int i = 0; i < vectorlength/2; i++){
+                const char front = complementBaseDecoded(vec->at(i));
+                const char back = complementBaseDecoded(vec->at(vectorlength - 1 - i));
+                vec->at(i)= back;
+                vec->at(vectorlength - 1 - i) = front;
+            }
+
+            if(vectorlength % 2 == 1){
+                const int middleindex = vectorlength/2;
+                vec->at(middleindex) = complementBaseDecoded(vec->at(middleindex));
+            }
+        }
 
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
         static constexpr std::uint8_t encodedbaseA() noexcept{
@@ -514,6 +529,16 @@
             for (int i=0; i<ints; ++i){
                 if( encodedsequence[indextrafo(i)] == encodedbaseC() ){
                     encodedsequence[indextrafo(i)]=encodedbaseT();
+                }
+            }
+        }
+
+        HD_WARNING_DISABLE
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr void NucleotideConverterVectorInplace_CtoT(std::vector<char> *vec, int veclength) noexcept{
+            for (int i=0; i<veclength; ++i){
+                if(vec->at(i)=='C'){
+                    vec->at(i)='T';
                 }
             }
         }
