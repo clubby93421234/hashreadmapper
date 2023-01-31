@@ -582,7 +582,7 @@ struct WindowBatchProcessor{
             8, //cg::groupsize per sequence
             stream
         );
-
+    //TODO undo die scheiße von gestern und mach das hier unter dem Kommentar einfach zwei mal
         SimilarReadIdsDevice similarReadIdsOfWindowsDevice = findReadIdsOfSimilarSequences(
             gpuMinhasher,
             minhashHandle,
