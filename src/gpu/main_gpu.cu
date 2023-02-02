@@ -506,8 +506,8 @@ struct WindowBatchProcessor{
                 h_windowsDecoded_RC.data() + w * decodedWindowPitchInBytes
             );
         }
-        //TODO do Nucleotide conversion here
- 
+
+        // do Nucleotide conversion here
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         CUDACHECK(cudaMemcpyAsync(
             d_windowsDecoded.data(),
@@ -516,7 +516,8 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
-        //TODO do RC and then NC
+
+        // do RC and then NC
         SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded_RC, h_windowsDecoded_RC.size());
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded_RC, h_windowsDecoded.size());
          CUDACHECK(cudaMemcpyAsync(
@@ -526,11 +527,13 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
+
         nvtx::pop_range();
         
 
         //Next step: 2bit encode windows, and query hash tables
         nvtx::push_range("find candidate reads for windows", 1);
+        
         rmm::device_uvector<unsigned int> d_windowsEncoded2Bit(batch.numWindows * encodedWindowPitchInInts, stream, mr);
         rmm::device_uvector<unsigned int> d_windowsEncoded2Bit_RC(batch.numWindows * encodedWindowPitchInInts, stream, mr);
         callEncodeSequencesTo2BitKernel(
@@ -611,17 +614,19 @@ struct WindowBatchProcessor{
         nvtx::push_range("gather candidate reads", 2);
         rmm::device_uvector<int> d_readLengths(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
         rmm::device_uvector<int> d_readLengths_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
-        
+
         rmm::device_uvector<unsigned int> d_readsEncoded2Bit(
             similarReadIdsOfWindowsDevice.totalNumReadIds * encodedReadPitchInInts, 
             stream, 
             mr
         );
+       
         rmm::device_uvector<unsigned int> d_readsEncoded2Bit_RC(
             similarReadIdsOfWindowsDevice_RC.totalNumReadIds * encodedReadPitchInInts, 
             stream, 
             mr
         );
+        
         gpuReadStorage->gatherSequenceLengths(
             readstorageHandle,
             d_readLengths.data(),
@@ -636,6 +641,24 @@ struct WindowBatchProcessor{
             makeAsyncConstBufferWrapper(hostIds.h_readIds.data()),
             similarReadIdsOfWindowsDevice.d_readIds.data(),
             similarReadIdsOfWindowsDevice.totalNumReadIds,
+            stream,
+            mr
+        );
+        
+        gpuReadStorage->gatherSequenceLengths(
+            readstorageHandle,
+            d_readLengths_RC.data(),
+            similarReadIdsOfWindowsDevice_RC.d_readIds.data(),
+            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,            
+            stream
+        );
+        gpuReadStorage->gatherSequences(
+            readstorageHandle,
+            d_readsEncoded2Bit_RC.data(),
+            encodedReadPitchInInts,
+            makeAsyncConstBufferWrapper(hostIds_RC.h_readIds.data()),
+            similarReadIdsOfWindowsDevice_RC.d_readIds.data(),
+            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
             stream,
             mr
         );
@@ -675,8 +698,16 @@ struct WindowBatchProcessor{
         );
 
         rmm::device_uvector<char> d_genomicSection(genomicSection.sequence.size(), stream, mr);
+        rmm::device_uvector<char> d_genomicSection_RC(genomicSection.sequence.size(), stream, mr);
         CUDACHECK(cudaMemcpyAsync(
             d_genomicSection.data(),
+            genomicSection.sequence.data(),
+            sizeof(char) * genomicSection.sequence.size(),
+            H2D,
+            stream
+        ));
+        CUDACHECK(cudaMemcpyAsync(
+            d_genomicSection_RC.data(),
             genomicSection.sequence.data(),
             sizeof(char) * genomicSection.sequence.size(),
             H2D,
