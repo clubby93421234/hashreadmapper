@@ -97,9 +97,7 @@ struct SimilarReadIdsHost{
     std::vector<read_number> h_readIds{};
     std::vector<int> h_numReadIdsPerSequence{};
     std::vector<int> h_numReadIdsPerSequencePrefixSum{};
-    std::vector<read_number> h_readIds_RC{};
-    std::vector<int> h_numReadIdsPerSequence_RC{};
-    std::vector<int> h_numReadIdsPerSequencePrefixSum_RC{};
+    
 };
 
 struct SimilarReadIdsDevice{
@@ -116,10 +114,8 @@ struct SimilarReadIdsDevice{
         totalNumReadIds(0),
         d_readIds(0, stream, mr),
         d_numReadIdsPerSequence(size, stream, mr),
-        d_numReadIdsPerSequencePrefixSum(size + 1, stream, mr),
-        d_readIds_RC(0, stream, mr),
-        d_numReadIdsPerSequence_RC(size, stream, mr),
-        d_numReadIdsPerSequencePrefixSum_RC(size + 1, stream, mr){
+        d_numReadIdsPerSequencePrefixSum(size + 1, stream, mr)
+        {
     }
 
     SimilarReadIdsHost copyToHost(cudaStream_t stream) const{
@@ -129,9 +125,7 @@ struct SimilarReadIdsDevice{
         result.h_readIds.resize(totalNumReadIds);
         result.h_numReadIdsPerSequence.resize(numSequences);
         result.h_numReadIdsPerSequencePrefixSum.resize(numSequences + 1);
-        result.h_readIds_RC.resize(totalNumReadIds);
-        result.h_numReadIdsPerSequence_RC.resize(numSequences);
-        result.h_numReadIdsPerSequencePrefixSum_RC.resize(numSequences + 1);
+        
         CUDACHECK(cudaMemcpyAsync(
             result.h_readIds.data(),
             d_readIds.data(),
@@ -153,27 +147,7 @@ struct SimilarReadIdsDevice{
             D2H,
             stream
         ));
-        CUDACHECK(cudaMemcpyAsync(
-            result.h_readIds_RC.data(),
-            d_readIds_RC.data(),
-            sizeof(read_number) * totalNumReadIds,
-            D2H,
-            stream
-        ));
-        CUDACHECK(cudaMemcpyAsync(
-            result.h_numReadIdsPerSequence_RC.data(),
-            d_numReadIdsPerSequence_RC.data(),
-            sizeof(int) * numSequences,
-            D2H,
-            stream
-        ));
-        CUDACHECK(cudaMemcpyAsync(
-            result.h_numReadIdsPerSequencePrefixSum_RC.data(),
-            d_numReadIdsPerSequencePrefixSum_RC.data(),
-            sizeof(int) * (numSequences + 1),
-            D2H,
-            stream
-        ));
+        
         CUDACHECK(cudaStreamSynchronize(stream));
         return result;
     }
@@ -184,9 +158,6 @@ struct SimilarReadIdsDevice{
     rmm::device_uvector<int> d_numReadIdsPerSequence;
     rmm::device_uvector<int> d_numReadIdsPerSequencePrefixSum;
 
-    rmm::device_uvector<read_number> d_readIds_RC;
-    rmm::device_uvector<int> d_numReadIdsPerSequence_RC;
-    rmm::device_uvector<int> d_numReadIdsPerSequencePrefixSum_RC;
 };
 
 //query hashtables
@@ -594,16 +565,27 @@ struct WindowBatchProcessor{
             stream,
             mr
         );
+        SimilarReadIdsDevice similarReadIdsOfWindowsDevice_RC = findReadIdsOfSimilarSequences(
+            gpuMinhasher,
+            minhashHandle,
+            d_windowsEncoded2Bit_RC.data(),
+            encodedWindowPitchInInts,
+            d_windowLengths_RC.data(),
+            batch.numWindows,
+            *programOptions,
+            stream,
+            mr
+        );
 
         nvtx::pop_range();
 
-        if(similarReadIdsOfWindowsDevice.totalNumReadIds == 0){
+        if(similarReadIdsOfWindowsDevice.totalNumReadIds == 0 && similarReadIdsOfWindowsDevice_RC.totalNumReadIds == 0){
             //none of the windows in the batch matched a read
             return;
         }
 
         SimilarReadIdsHost hostIds = similarReadIdsOfWindowsDevice.copyToHost(stream);
-
+        SimilarReadIdsHost hostIds_RC = similarReadIdsOfWindowsDevice_RC.copyToHost(stream);
         #ifdef COUNT_WINDOW_HITS
         nvtx::push_range("window statistics", 9);
         //count hits
@@ -628,8 +610,15 @@ struct WindowBatchProcessor{
         //next step: gather the corresponding sequences of similar read ids
         nvtx::push_range("gather candidate reads", 2);
         rmm::device_uvector<int> d_readLengths(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
+        rmm::device_uvector<int> d_readLengths_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
+        
         rmm::device_uvector<unsigned int> d_readsEncoded2Bit(
             similarReadIdsOfWindowsDevice.totalNumReadIds * encodedReadPitchInInts, 
+            stream, 
+            mr
+        );
+        rmm::device_uvector<unsigned int> d_readsEncoded2Bit_RC(
+            similarReadIdsOfWindowsDevice_RC.totalNumReadIds * encodedReadPitchInInts, 
             stream, 
             mr
         );

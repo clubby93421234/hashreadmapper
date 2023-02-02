@@ -195,11 +195,18 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
             for(int orientation = 0; orientation < 2; orientation++){
                 const bool isReverseComplement = orientation == 1;
 
+                //try to save original candidate and reset it after usage
+                unsigned int* const originalCandidate;
+                for(int i=0; i <candidateLength;++i){
+                    originalCandidate[block_transposed_index(i)]=mySharedCandidate[block_transposed_index(i)];
+                }
+
                 if(isReverseComplement) {
                     SequenceHelpers::reverseComplementSequenceInplace2BitHiLo(mySharedCandidate, candidateLength, block_transposed_index);
                 }
-                //TODO add nucleotide conversion
+
                SequenceHelpers::NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
+                
                 //save anchor in shared memory
                 for(int i = 0; i < anchorints; i++) {
                     mySharedAnchor[block_transposed_index(i)] = anchorptr[i * numAnchors];
@@ -231,6 +238,11 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                         bestShift = shift;
                         bestOrientation = orientation;
                     }
+                }
+                
+                //try to save original candidate and reset it after usage
+                for(int i=0; i <candidateLength;++i){
+                    mySharedCandidate[block_transposed_index(i)]=originalCandidate[block_transposed_index(i)];
                 }
             }
 
