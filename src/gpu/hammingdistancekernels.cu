@@ -166,11 +166,13 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
     const int stride = blockDim.x * gridDim.x;
 
     for(int candidateIndex = tid; candidateIndex < numCandidates; candidateIndex += stride){
+
         const int anchorIndex = candidateIndex;
         const int anchorLength = anchorSequencesLength[anchorIndex];
         const int anchorints = SequenceHelpers::getEncodedNumInts2BitHiLo(anchorLength);
         assert(anchorints <= int(encodedSequencePitchInInts2BitHiLoAnchor));
         const unsigned int* const anchorptr = anchorDataHiLoTransposed + std::size_t(anchorIndex);
+
         const int candidateLength = candidateSequencesLength[candidateIndex];
         const int candidateints = SequenceHelpers::getEncodedNumInts2BitHiLo(candidateLength);
         assert(candidateints <= int(encodedSequencePitchInInts2BitHiLoCandidate));
@@ -196,16 +198,16 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                 const bool isReverseComplement = orientation == 1;
 
                 //try to save original candidate and reset it after usage
-                unsigned int* const originalCandidate;
+             /*   unsigned int*  originalCandidate;
                 for(int i=0; i <candidateLength;++i){
                     originalCandidate[block_transposed_index(i)]=mySharedCandidate[block_transposed_index(i)];
                 }
-
+*/
                 if(isReverseComplement) {
                     SequenceHelpers::reverseComplementSequenceInplace2BitHiLo(mySharedCandidate, candidateLength, block_transposed_index);
                 }
 
-               SequenceHelpers::NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
+              SequenceHelpers::NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
                 
                 //save anchor in shared memory
                 for(int i = 0; i < anchorints; i++) {
@@ -241,9 +243,12 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                 }
                 
                 //try to save original candidate and reset it after usage
-                for(int i=0; i <candidateLength;++i){
+          /*      for(int i=0; i <candidateLength;++i){
                     mySharedCandidate[block_transposed_index(i)]=originalCandidate[block_transposed_index(i)];
-                }
+                }*/
+                for(int i = 0; i < candidateints; i++) {
+                mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
+            }
             }
 
             d_bestShifts[candidateIndex] = bestShift;

@@ -781,7 +781,7 @@ struct WindowBatchProcessor{
         );
 
         nvtx::pop_range();
-
+        
         ShiftedHammingDistanceResultHost shdResultHost = shdResult.copyToHost(stream);
         
         std::vector<int> h_extensionsLeft(similarReadIdsOfWindowsDevice.totalNumReadIds);
