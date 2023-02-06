@@ -246,6 +246,7 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
           /*      for(int i=0; i <candidateLength;++i){
                     mySharedCandidate[block_transposed_index(i)]=originalCandidate[block_transposed_index(i)];
                 }*/
+                if(orientation==1)
                 for(int i = 0; i < candidateints; i++) {
                 mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
             }
