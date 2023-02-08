@@ -870,6 +870,7 @@ struct Mappinghandler
         /// @param programOptions_ 
         /// @param genome_ 
         /// @param results_ 
+        /// @param resultsRC_
         Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
@@ -1067,6 +1068,8 @@ void printtoSAM(){
 
         for(std::size_t r = 0, processedResults = 0; r < numreads; r++){
             const auto& result = (*results)[r];
+            const auto& resultRC = (*resultsRC)[r];
+            //TODO -> get the shit for RC batch and do alignment. then update and ccompare. upload best to sam
             read_number readId = r;
             
             std::vector<int> readLengths(1);
