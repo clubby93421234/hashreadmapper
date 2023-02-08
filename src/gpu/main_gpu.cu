@@ -460,7 +460,7 @@ struct WindowBatchProcessor{
 
 
 
-    void operator()(const Genome::BatchOfWindows& batch){
+    void operator()(const Genome::BatchOfWindows& batch, bool ReverseComplementBatch){
 
         auto* mr = rmm::mr::get_current_device_resource();
         cudaStream_t stream = cudaStreamPerThread;
@@ -480,32 +480,20 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
-        //for RC-3N-Genome
-        rmm::device_uvector<int> d_windowLengths_RC(batch.numWindows, stream, mr);
-        CUDACHECK(cudaMemcpyAsync(
-            d_windowLengths_RC.data(),
-            batch.windowLengths.data(),
-            sizeof(int) * batch.numWindows,
-            H2D,
-            stream
-        ));
+        
         rmm::device_uvector<char> d_windowsDecoded(decodedWindowPitchInBytes * batch.numWindows, stream, mr);
         std::vector<char> h_windowsDecoded(decodedWindowPitchInBytes * batch.numWindows);    
 
-        rmm::device_uvector<char> d_windowsDecoded_RC(decodedWindowPitchInBytes * batch.numWindows, stream, mr);
-        std::vector<char> h_windowsDecoded_RC(decodedWindowPitchInBytes * batch.numWindows);            
         for(int w = 0; w < batch.numWindows; w++){
             std::copy(
                 batch.windowsDecoded[w].begin(), 
                 batch.windowsDecoded[w].end(),
                 h_windowsDecoded.data() + w * decodedWindowPitchInBytes
             );
-            std::copy(
-                batch.windowsDecoded[w].begin(), 
-                batch.windowsDecoded[w].end(),
-                h_windowsDecoded_RC.data() + w * decodedWindowPitchInBytes
-            );
+           
         }
+        if(ReverseComplementBatch)
+            SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
@@ -521,26 +509,21 @@ struct WindowBatchProcessor{
 
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do RC and then NC
-        SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded_RC, h_windowsDecoded_RC.size());
-        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded_RC, h_windowsDecoded.size());
+        
+        //SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded_RC, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
-         CUDACHECK(cudaMemcpyAsync(
-            d_windowsDecoded_RC.data(),
-            h_windowsDecoded_RC.data(),
-            sizeof(char) * decodedWindowPitchInBytes * batch.numWindows,
-            H2D,
-            stream
-        ));
+        
 
         nvtx::pop_range();
         
+
 
         //Next step: 2bit encode windows, and query hash tables
         nvtx::push_range("find candidate reads for windows", 1);
         
         rmm::device_uvector<unsigned int> d_windowsEncoded2Bit(batch.numWindows * encodedWindowPitchInInts, stream, mr);
-        rmm::device_uvector<unsigned int> d_windowsEncoded2Bit_RC(batch.numWindows * encodedWindowPitchInInts, stream, mr);
+        
         callEncodeSequencesTo2BitKernel(
             d_windowsEncoded2Bit.data(),
             d_windowsDecoded.data(),
@@ -551,17 +534,8 @@ struct WindowBatchProcessor{
             8, //cg::groupsize per sequence
             stream
         );
-        callEncodeSequencesTo2BitKernel(
-            d_windowsEncoded2Bit_RC.data(),
-            d_windowsDecoded_RC.data(),
-            d_windowLengths_RC.data(),
-            decodedWindowPitchInBytes,
-            encodedWindowPitchInInts,
-            batch.numWindows,
-            8, //cg::groupsize per sequence
-            stream
-        );
-    //TODO undo die scheiße von gestern und mach das hier unter dem Kommentar einfach zwei mal
+       
+
         SimilarReadIdsDevice similarReadIdsOfWindowsDevice = findReadIdsOfSimilarSequences(
             gpuMinhasher,
             minhashHandle,
@@ -573,27 +547,16 @@ struct WindowBatchProcessor{
             stream,
             mr
         );
-        SimilarReadIdsDevice similarReadIdsOfWindowsDevice_RC = findReadIdsOfSimilarSequences(
-            gpuMinhasher,
-            minhashHandle,
-            d_windowsEncoded2Bit_RC.data(),
-            encodedWindowPitchInInts,
-            d_windowLengths_RC.data(),
-            batch.numWindows,
-            *programOptions,
-            stream,
-            mr
-        );
-
+        
         nvtx::pop_range();
 
-        if(similarReadIdsOfWindowsDevice.totalNumReadIds == 0 && similarReadIdsOfWindowsDevice_RC.totalNumReadIds == 0){
+        if( similarReadIdsOfWindowsDevice.totalNumReadIds == 0 ){
             //none of the windows in the batch matched a read
             return;
         }
 
         SimilarReadIdsHost hostIds = similarReadIdsOfWindowsDevice.copyToHost(stream);
-        SimilarReadIdsHost hostIds_RC = similarReadIdsOfWindowsDevice_RC.copyToHost(stream);
+        
         #ifdef COUNT_WINDOW_HITS
         nvtx::push_range("window statistics", 9);
         //count hits
@@ -619,7 +582,7 @@ struct WindowBatchProcessor{
         nvtx::push_range("gather candidate reads", 2);
 
         rmm::device_uvector<int> d_readLengths(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
-        rmm::device_uvector<int> d_readLengths_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
+        
 
         rmm::device_uvector<unsigned int> d_readsEncoded2Bit(
             similarReadIdsOfWindowsDevice.totalNumReadIds * encodedReadPitchInInts, 
@@ -627,13 +590,9 @@ struct WindowBatchProcessor{
             mr
         );
        
-        rmm::device_uvector<unsigned int> d_readsEncoded2Bit_RC(
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds * encodedReadPitchInInts, 
-            stream, 
-            mr
-        );
+        
 
-        //3N-Batch
+       
         gpuReadStorage->gatherSequenceLengths(
             readstorageHandle,
             d_readLengths.data(),
@@ -652,24 +611,8 @@ struct WindowBatchProcessor{
             mr
         );
 
-        //RC-3N-Batch
-        gpuReadStorage->gatherSequenceLengths(
-            readstorageHandle,
-            d_readLengths_RC.data(),
-            similarReadIdsOfWindowsDevice_RC.d_readIds.data(),
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,            
-            stream
-        );
-        gpuReadStorage->gatherSequences(
-            readstorageHandle,
-            d_readsEncoded2Bit_RC.data(),
-            encodedReadPitchInInts,
-            makeAsyncConstBufferWrapper(hostIds_RC.h_readIds.data()),
-            similarReadIdsOfWindowsDevice_RC.d_readIds.data(),
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
-            stream,
-            mr
-        );
+       
+        
 
         nvtx::pop_range();
         
@@ -700,6 +643,7 @@ struct WindowBatchProcessor{
         assert(std::all_of(batch.chromosomeIds.begin(), batch.chromosomeIds.end(), [&](int id){ return id == batch.chromosomeIds[0];}));
         assert(std::is_sorted(batch.positions.begin(), batch.positions.end()));
 
+//TODO muss ich hier 3-N machen?
         Genome::Section genomicSection = batch.genome->getSectionOfGenome(
             batch.chromosomeIds[0], 
             batch.positions[0] - maxReadLength / 2,
@@ -707,7 +651,7 @@ struct WindowBatchProcessor{
         );
 
         rmm::device_uvector<char> d_genomicSection(genomicSection.sequence.size(), stream, mr);
-        rmm::device_uvector<char> d_genomicSection_RC(genomicSection.sequence.size(), stream, mr);
+      
         CUDACHECK(cudaMemcpyAsync(
             d_genomicSection.data(),
             genomicSection.sequence.data(),
@@ -715,13 +659,7 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
-        CUDACHECK(cudaMemcpyAsync(
-            d_genomicSection_RC.data(),
-            genomicSection.sequence.data(),
-            sizeof(char) * genomicSection.sequence.size(),
-            H2D,
-            stream
-        ));
+        
         rmm::device_uvector<int> d_windowPositions(batch.numWindows, stream, mr);
         CUDACHECK(cudaMemcpyAsync(
             d_windowPositions.data(),
@@ -730,25 +668,14 @@ struct WindowBatchProcessor{
             H2D,
             stream
         ));
-        rmm::device_uvector<int> d_windowPositions_RC(batch.numWindows, stream, mr);
-        CUDACHECK(cudaMemcpyAsync(
-            d_windowPositions_RC.data(),
-            batch.positions.data(),
-            sizeof(int) * batch.numWindows,
-            H2D,
-            stream
-        ));
+       
 
         rmm::device_uvector<int> d_extensionsLeft(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
         rmm::device_uvector<int> d_extensionsRight(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
         rmm::device_uvector<int> d_extendedWindowLengths(similarReadIdsOfWindowsDevice.totalNumReadIds, stream, mr);
         rmm::device_uvector<unsigned int> d_extendedwindowsEncoded2Bit(similarReadIdsOfWindowsDevice.totalNumReadIds * encodedExtendedWindowPitchInInts, stream, mr);
 
-        rmm::device_uvector<int> d_extensionsLeft_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
-        rmm::device_uvector<int> d_extensionsRight_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
-        rmm::device_uvector<int> d_extendedWindowLengths_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds, stream, mr);
-        rmm::device_uvector<unsigned int> d_extendedwindowsEncoded2Bit_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds * encodedExtendedWindowPitchInInts, stream, mr);
-
+        
         //this is just for testing purpose to set the padding bytes to 0
         CUDACHECK(cudaMemsetAsync(
             d_extendedwindowsEncoded2Bit.data(),
@@ -765,14 +692,7 @@ struct WindowBatchProcessor{
             stream,
             mr
         );
-        rmm::device_uvector<int> d_segmentIds_RC = getSegmentIdsPerElement(
-            similarReadIdsOfWindowsDevice_RC.d_numReadIdsPerSequence.data(), 
-            similarReadIdsOfWindowsDevice_RC.d_numReadIdsPerSequencePrefixSum.data(), 
-            batch.numWindows, 
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
-            stream,
-            mr
-        );
+       
         callGenerateExtendedWindows2BitKernel(
             d_genomicSection.data(), 
             genomicSection.begin, 
@@ -790,23 +710,7 @@ struct WindowBatchProcessor{
             d_extensionsRight.data(),
             stream
         );      
-        callGenerateExtendedWindows2BitKernel(
-            d_genomicSection_RC.data(), 
-            genomicSection.begin, 
-            genomicSection.end, 
-            d_readLengths_RC.data(),
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
-            d_segmentIds_RC.data(),
-            programOptions->windowSize,
-            d_windowPositions_RC.data(),
-            maxExtendedWindowLength,
-            d_extendedwindowsEncoded2Bit_RC.data(),
-            d_extendedWindowLengths_RC.data(),
-            encodedExtendedWindowPitchInInts,
-            d_extensionsLeft_RC.data(),
-            d_extensionsRight_RC.data(),
-            stream
-        );      
+       
         nvtx::pop_range();
 
         nvtx::push_range("align reads to extended windows", 4);
@@ -826,24 +730,11 @@ struct WindowBatchProcessor{
             stream, 
             mr
         );
-        ShiftedHammingDistanceResultDevice shdResult_RC = computeShiftedHammingDistancesFullOverlap(
-            similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
-            d_extendedwindowsEncoded2Bit_RC.data(),
-            d_extendedWindowLengths_RC.data(),
-            maxExtendedWindowLength,
-            d_readsEncoded2Bit_RC.data(),
-            d_readLengths_RC.data(),
-            maxReadLength,
-            encodedExtendedWindowPitchInInts,
-            encodedReadPitchInInts,
-            programOptions->maxHammingPercent,
-            stream, 
-            mr
-        );
+        
         nvtx::pop_range();
         
         ShiftedHammingDistanceResultHost shdResultHost = shdResult.copyToHost(stream);
-        ShiftedHammingDistanceResultHost shdResultHost_RC = shdResult_RC.copyToHost(stream);
+       
 
         std::vector<int> h_extensionsLeft(similarReadIdsOfWindowsDevice.totalNumReadIds);
 
@@ -855,15 +746,7 @@ struct WindowBatchProcessor{
             stream
         ));
 
-        std::vector<int> h_extensionsLeft_RC(similarReadIdsOfWindowsDevice_RC.totalNumReadIds);
-
-        CUDACHECK(cudaMemcpyAsync(
-            h_extensionsLeft_RC.data(),
-            d_extensionsLeft_RC.data(),
-            sizeof(int) * similarReadIdsOfWindowsDevice_RC.totalNumReadIds,
-            D2H,
-            stream
-        ));
+        
 
         CUDACHECK(cudaStreamSynchronize(stream));
 
@@ -899,7 +782,7 @@ struct WindowBatchProcessor{
         for(int wid = 0, offset = 0; wid < batch.numWindows; wid++){
             
             const int numReadsOfWindow = hostIds.h_numReadIdsPerSequence[wid];
-//TODO: #1 upload resultsRC as results
+
             for(int r = 0; r < numReadsOfWindow; r++){
                 MappedRead currentResult;
                 currentResult.orientation = shdResultHost.h_alignment_orientation[offset + r];
@@ -911,7 +794,12 @@ struct WindowBatchProcessor{
                 //translate shift in extended window to shift in original window
                 currentResult.shift = shift - h_extensionsLeft[offset + r];
 
-                auto& currentBestResult = results[hostIds.h_readIds[offset + r]];
+                    //i have to define currentBestResult and then i redefine it depending if RC or not
+                    auto& currentBestResult = results[hostIds.h_readIds[offset + r]];
+                if(ReverseComplementBatch){
+                    auto& currentBestResult = resultsRC[hostIds.h_readIds[offset + r]];
+                }
+            //                auto& currentBestResult = results[hostIds.h_readIds[offset + r]];
 
                 //if the computed alignment is "good"
                 if(currentResult.orientation != AlignmentOrientation::None){
@@ -986,12 +874,13 @@ struct Mappinghandler
             const ProgramOptions* programOptions_,
             const Genome* genome_,
              std::vector<MappedRead>* results_
-             
+             std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
         genome(genome_),
-        results(results_)
-        //,cpuReadStorage(cpuReadStorage_)
+        results(results_),
+        resultsRC(resultsRC_)
+        
         {
            
         }
@@ -1078,6 +967,7 @@ struct Mappinghandler
         const Genome* genome;
         int mappertype=1;
         std::vector<MappedRead>* results;
+        std::vector<MappedRead>* resultsRC;
 
     INLINEQUALIFIER
     void NucleoideConverer(char* output, const char* input, int length){
@@ -1947,7 +1837,8 @@ void performMappingGpu(const ProgramOptions& programOptions){
     );
 
     auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
-        windowBatchProcessor(batch);
+        windowBatchProcessor(batch,false);
+        windowBatchProcessor(batch,true);
 
         processedWindowCount += batch.numWindows;
         processedWindowCountProgress += batch.numWindows;
@@ -1974,7 +1865,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
-    Mappinghandler mapper(&programOptions, &genome, &results);
+    Mappinghandler mapper(&programOptions, &genome, &results, &resultsRC);
 
     helpers::CpuTimer timermapping("process mapping");
 

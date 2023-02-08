@@ -242,14 +242,11 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                     }
                 }
                 
-                //try to save original candidate and reset it after usage
-          /*      for(int i=0; i <candidateLength;++i){
-                    mySharedCandidate[block_transposed_index(i)]=originalCandidate[block_transposed_index(i)];
-                }*/
-                if(orientation==1)
+                //after the first iteration. Reset the read to do RC and then 3N it
+                if(orientation==0)
                 for(int i = 0; i < candidateints; i++) {
-                mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
-            }
+                    mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
+                }
             }
 
             d_bestShifts[candidateIndex] = bestShift;
