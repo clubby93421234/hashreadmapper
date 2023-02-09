@@ -874,7 +874,7 @@ struct Mappinghandler
         Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
-             std::vector<MappedRead>* results_
+             std::vector<MappedRead>* results_,
              std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
@@ -984,6 +984,7 @@ struct Mappinghandler
         }else
         assert("shit");
      }
+        
         //Helper struct for CSSW-Mapping
 struct AlignerArguments{           
            std::string query;
@@ -1003,9 +1004,13 @@ struct AlignerArguments{
         MappedRead result;
             read_number readId;
             std::string readsequence;
+
         std::vector<StripedSmithWaterman::Alignment> alignments;
+        std::vector<int> num_conversions;
+
             AlignerArguments():alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment(),
-                                            StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()})
+                                            StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
+                            num_conversions({0,0,0,0})
             {
             }
 
@@ -1016,7 +1021,7 @@ std::vector<AlignerArguments> mappingout;
 
 /// @brief simple print methode for the vector mappingout into the "CSSW_SAM.SAM" file. Used for CSSW-Mapping
 void printtoSAM(){
-    std::cout<<"muss noch...\n";
+    //TODO #3 updated saving to SAM file and setting the sam tag
     /*
     std::ofstream outputstream("CSSW_SAM.SAM");
 
@@ -1098,12 +1103,23 @@ void printtoSAM(){
             if(result.orientation != AlignmentOrientation::None){
                
                 const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                
+                const auto& genomesequenceRC = (*genome).data.at(resultRC.chromosomeId);
+
                 const std::size_t windowlength = result.position + 
                     programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
                     result.position;
+                const std::size_t windowlengthRC = resultRC.position + 
+                    programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
+                    resultRC.position;
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
+
+                //RC the chromosome, then get the needed window
+                 std::string rev;
+            rev.resize(windowlengthRC);
+                SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),windowlengthRC);
+                std::string_view windowRC(rev.c_str() + resultRC.position, windowlength);
+
                 processedResults++;
 
                 int32_t maskLen = readLengths[0]/2;
@@ -1125,7 +1141,8 @@ void printtoSAM(){
                     ali.ref=std::string(window).c_str();
                     ali.three_n_ref.resize(windowlength);
                     NucleoideConverer(ali.three_n_ref.data() ,ali.ref.c_str(), windowlength);
-                    ali.rc_ref=SequenceHelpers::reverseComplementSequenceDecoded(ali.ref.data(), windowlength); 
+                    ali.rc_ref=std::string(windowRC).c_str();;
+                    //SequenceHelpers::reverseComplementSequenceDecoded(ali.ref.data(), windowlength); 
 
                     ali.three_n_rc_ref.resize(windowlength);
                     NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlength);
@@ -1210,7 +1227,7 @@ void printtoSAM(){
        // parallelmapping.print();
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
-
+//TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
             
         int refPos = 0, altPos = 0;
@@ -1275,6 +1292,7 @@ void printtoSAM(){
         }
 
      };
+
         auto comparefk=[&](auto begin, auto end, int /*threadid*/){
             for(auto i=begin; i< end; i++){
                 
@@ -1287,7 +1305,7 @@ void printtoSAM(){
                 recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
                 recalculateAlignmentScorefk(mappingout.at(i), cigiii.getEntries(), 2);
                 recalculateAlignmentScorefk(mappingout.at(i), cigiv.getEntries(), 3);
-            
+           
             }
         };
     threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
