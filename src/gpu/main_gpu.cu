@@ -999,9 +999,11 @@ struct AlignerArguments{
         std::string sam_tag;
             int ref_len;
         StripedSmithWaterman::Filter filter;
-            
+            std::size_t windowlength;
+            std::size_t windowlengthRC;
             int32_t maskLen;
         MappedRead result;
+        MappedRead resultRC;
             read_number readId;
             std::string readsequence;
 
@@ -1115,9 +1117,9 @@ void printtoSAM(){
                 std::string_view window(genomesequence.data() + result.position, windowlength);
 
                 //RC the chromosome, then get the needed window
-                 std::string rev;
-            rev.resize(windowlengthRC);
-                SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),windowlengthRC);
+                std::string rev;
+                rev.resize(windowlengthRC);
+                SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),genomesequenceRC.size());
                 std::string_view windowRC(rev.c_str() + resultRC.position, windowlength);
 
                 processedResults++;
@@ -1153,6 +1155,7 @@ void printtoSAM(){
                     ali.ref_len=windowlength;
                    
                     ali.result=result;
+                    ali.resultRC=resultRC;
                     
                     mappingout.push_back(ali);
                 
@@ -1220,16 +1223,20 @@ void printtoSAM(){
                 }
         };
         
-        //std::size_t tomax = mappingout.size();
+       
         std::size_t start=0;
-        //helpers::CpuTimer parallelmapping("parallel mapping time:");
         threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
-       // parallelmapping.print();
+       
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-            
+            if(h==2 ||h==3){
+                std::string_view _windowRC(rev.c_str() + aa.resultRC.position, aa.resultRC-> );
+            }
+            std::string* ref;
+            std::string* query;
+
         int refPos = 0, altPos = 0;
         for (const auto  & cigarEntry : cig) {
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);

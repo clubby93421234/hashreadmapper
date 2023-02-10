@@ -197,12 +197,6 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
             for(int orientation = 0; orientation < 2; orientation++){
                 const bool isReverseComplement = orientation == 1;
 
-                //try to save original candidate and reset it after usage
-             /*   unsigned int*  originalCandidate;
-                for(int i=0; i <candidateLength;++i){
-                    originalCandidate[block_transposed_index(i)]=mySharedCandidate[block_transposed_index(i)];
-                }
-*/
                 if(isReverseComplement) {
                     SequenceHelpers::reverseComplementSequenceInplace2BitHiLo(mySharedCandidate, candidateLength, block_transposed_index);
                 }
