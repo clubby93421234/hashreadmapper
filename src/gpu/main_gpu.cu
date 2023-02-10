@@ -1006,7 +1006,7 @@ struct AlignerArguments{
         MappedRead resultRC;
             read_number readId;
             std::string readsequence;
-
+        std::string rev;
         std::vector<StripedSmithWaterman::Alignment> alignments;
         std::vector<int> num_conversions;
 
@@ -1157,6 +1157,10 @@ void printtoSAM(){
                     ali.result=result;
                     ali.resultRC=resultRC;
                     
+                    ali.rev=rev;
+                    ali.windowlength=windowlength;
+                    ali.windowlengthRC=windowlengthRC;
+
                     mappingout.push_back(ali);
                 
 
@@ -1231,12 +1235,33 @@ void printtoSAM(){
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-            if(h==2 ||h==3){
-                std::string_view _windowRC(rev.c_str() + aa.resultRC.position, aa.resultRC-> );
-            }
+           
             std::string* ref;
             std::string* query;
+            std::string RCref;
+                switch (h)
+                {
+                case 0:
+                    ref=&aa.three_n_ref;
+                    RCref=std::string(std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength)).c_str();
+                    query=&aa.three_n_query;
+                    break;
+                case 1:
+                    query=&aa.three_n_rc_query;
+                    ref=&aa.three_n_ref;
+                    break;
+                case 2:
+                    query=&aa.three_n_rc_query;
+                    ref=&aa.three_n_rc_ref;
+                    break;
+                case 3:
+                    /* code */
+                    break;
 
+                default:
+                std::cout<<"sth went wrong with recalculating alignment score\n";
+                    break;
+                }
         int refPos = 0, altPos = 0;
         for (const auto  & cigarEntry : cig) {
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
