@@ -1157,7 +1157,7 @@ void printtoSAM(){
                     ali.result=result;
                     ali.resultRC=resultRC;
                     
-                    ali.rev=rev;
+                    ali.rev=rev;  //RC the chromosome, then get the needed window
                     ali.windowlength=windowlength;
                     ali.windowlengthRC=windowlengthRC;
 
@@ -1238,38 +1238,44 @@ void printtoSAM(){
            
             std::string* ref;
             std::string* query;
-            std::string RCref;
+            std::string_view RCref;
                 switch (h)
                 {
-                case 0:
+                case 0: // 3NQuery-3NREF
                     ref=&aa.three_n_ref;
-                    RCref=std::string(std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength)).c_str();
+                   // std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength);
+                    RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
                     query=&aa.three_n_query;
                     break;
-                case 1:
+                case 1:// 3NRC_Query-3NREF
                     query=&aa.three_n_rc_query;
                     ref=&aa.three_n_ref;
+                    RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
                     break;
-                case 2:
+                case 2: // 3NRC_Query - 3NRC_REF
                     query=&aa.three_n_rc_query;
                     ref=&aa.three_n_rc_ref;
+                    RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
-                case 3:
-                    /* code */
+                case 3:  // 3NQuery - 3NRC_REF
+                    query=&aa.three_n_query;
+                    ref=&aa.three_n_rc_ref;
+                    RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
 
                 default:
                 std::cout<<"sth went wrong with recalculating alignment score\n";
                     break;
                 }
+                
         int refPos = 0, altPos = 0;
         for (const auto  & cigarEntry : cig) {
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
         switch (cigarEntry.first) {
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
-                if (aa.ref[refPos + i] == aa.query[altPos + i] || aa.ref[refPos + i] == WILDCARD_NUCLEOTIDE
-                    || aa.query[altPos + i] == WILDCARD_NUCLEOTIDE)
+                if (ref->at(refPos + i) == query->at(altPos + i) || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE
+                    || query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
                     continue;
                 //TODO
             }
