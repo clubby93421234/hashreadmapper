@@ -1235,31 +1235,31 @@ void printtoSAM(){
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           
+           int num_mismatches=0;
             std::string* ref;
             std::string* query;
             std::string_view RCref;
                 switch (h)
                 {
                 case 0: // 3NQuery-3NREF
-                    ref=&aa.three_n_ref;
+                    ref=&aa.ref;
                    // std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength);
                     RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
-                    query=&aa.three_n_query;
+                    query=&aa.query;
                     break;
                 case 1:// 3NRC_Query-3NREF
-                    query=&aa.three_n_rc_query;
-                    ref=&aa.three_n_ref;
+                    query=&aa.rc_query;
+                    ref=&aa.ref;
                     RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
                     break;
                 case 2: // 3NRC_Query - 3NRC_REF
-                    query=&aa.three_n_rc_query;
-                    ref=&aa.three_n_rc_ref;
+                    query=&aa.rc_query;
+                    ref=&aa.rc_ref;
                     RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
                 case 3:  // 3NQuery - 3NRC_REF
-                    query=&aa.three_n_query;
-                    ref=&aa.three_n_rc_ref;
+                    query=&aa.query;
+                    ref=&aa.rc_ref;
                     RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
 
@@ -1274,10 +1274,18 @@ void printtoSAM(){
         switch (cigarEntry.first) {
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
-                if (ref->at(refPos + i) == query->at(altPos + i) || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE
-                    || query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                if (
+                    (
+                        ref->at(refPos + i) == query->at(altPos + i) 
+                    &&  ref->at(altPos +i) == SequenceHelpers::complementBaseDecoded(RCref.at(altPos +i))
+                    )
+                    || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE
+                    || query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                )
                     continue;
-                //TODO
+                //TODO: what if there is a missmatch or conversion? --> ...
+                
+
             }
             refPos += basesLeft;
             altPos += basesLeft;
