@@ -1276,15 +1276,16 @@ void printtoSAM(){
             for (int i = 0; i < basesLeft; ++i) {
                 if (
                     (
-                        ref->at(refPos + i) == query->at(altPos + i) 
-                    &&  ref->at(altPos +i) == SequenceHelpers::complementBaseDecoded(RCref.at(altPos +i))
-                    )
-                    || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE
+                        ref->at(refPos + i) == query->at(altPos + i) //matching query and ref
+                    &&  query->at(altPos +i) == SequenceHelpers::complementBaseDecoded(RCref.at(altPos +i)) //and matching query with RC ref
+                     )
+                    || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
                     || query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
                 )
-                    continue;
+                    continue; //not interesed
+                    
                 //TODO: what if there is a missmatch or conversion? --> ...
-                
+
 
             }
             refPos += basesLeft;
