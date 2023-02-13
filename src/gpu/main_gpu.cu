@@ -1115,7 +1115,7 @@ void printtoSAM(){
                     resultRC.position;
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
-
+std::cout<<"trdej\n";
                 //RC the chromosome, then get the needed window
                 std::string rev;
                 rev.resize(windowlengthRC);
@@ -1143,7 +1143,7 @@ void printtoSAM(){
                     ali.ref=std::string(window).c_str();
                     ali.three_n_ref.resize(windowlength);
                     NucleoideConverer(ali.three_n_ref.data() ,ali.ref.c_str(), windowlength);
-                    ali.rc_ref=std::string(windowRC).c_str();;
+                    ali.rc_ref=std::string(windowRC).c_str();
                     //SequenceHelpers::reverseComplementSequenceDecoded(ali.ref.data(), windowlength); 
 
                     ali.three_n_rc_ref.resize(windowlength);
@@ -1178,7 +1178,7 @@ void printtoSAM(){
 
        //function that maps all 4 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF , 3NRC_Query - 3NRC_REF and 3NQuery - 3NRC_REF
         auto mapfk=[&](auto begin, auto end, int /*threadid*/){
-            //std::cout<<"i am doing my job!\n";
+            std::cout<<"i am doing my job!\n";
                 for(auto i=begin; i< end; i++){
 
                     // 3NQuery-3NREF
@@ -1230,7 +1230,7 @@ void printtoSAM(){
        
         std::size_t start=0;
         threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
-       
+       std::cout<<"mapped, now to recalculaion of AS:...\n";
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
@@ -1239,6 +1239,7 @@ void printtoSAM(){
             std::string* ref;
             std::string* query;
             std::string_view RCref;
+            std::cout<<"allesguthier: "<<h<<"\n";
                 switch (h)
                 {
                 case 0: // 3NQuery-3NREF
@@ -1267,7 +1268,7 @@ void printtoSAM(){
                 std::cout<<"sth went wrong with recalculating alignment score\n";
                     break;
                 }
-                
+                std::cout<<"immernoch "<<h<<"\n";
         int refPos = 0, altPos = 0;
         for (const auto  & cigarEntry : cig) {
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
