@@ -471,7 +471,6 @@ struct WindowBatchProcessor{
 
         //Next step: transfer windows to gpu
         nvtx::push_range("transfer windows to gpu", 0);
-        //for 3N-Genome
         rmm::device_uvector<int> d_windowLengths(batch.numWindows, stream, mr);
         CUDACHECK(cudaMemcpyAsync(
             d_windowLengths.data(),
@@ -490,12 +489,13 @@ struct WindowBatchProcessor{
                 batch.windowsDecoded[w].end(),
                 h_windowsDecoded.data() + w * decodedWindowPitchInBytes
             );
-           
+      
         }
         if(ReverseComplementBatch)
             SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
+     //TODO #5 perfomence hier ist kaka
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
@@ -507,18 +507,8 @@ struct WindowBatchProcessor{
             stream
         ));
 
-        //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
-        // do RC and then NC
-        
-        //SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded_RC, h_windowsDecoded.size());
-        //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
-
-        
-
         nvtx::pop_range();
         
-
-
         //Next step: 2bit encode windows, and query hash tables
         nvtx::push_range("find candidate reads for windows", 1);
         
@@ -1115,13 +1105,16 @@ void printtoSAM(){
                     resultRC.position;
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
-std::cout<<"trdej\n";
+std::cout<<"trdej"<<windowlengthRC<<"\n";
                 //RC the chromosome, then get the needed window
                 std::string rev;
-                rev.resize(windowlengthRC);
+                rev.resize(genomesequenceRC.size());
+                std::cout<<"zzzhz\n";
+                //TODO #4 Speicherzugrifffehler beheben!!
                 SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),genomesequenceRC.size());
-                std::string_view windowRC(rev.c_str() + resultRC.position, windowlength);
-
+                std::cout<<"srgr\n";
+                std::string_view windowRC(rev.c_str() + resultRC.position, windowlengthRC);
+                std::cout<<"aswedf\n";
                 processedResults++;
 
                 int32_t maskLen = readLengths[0]/2;
@@ -1163,7 +1156,7 @@ std::cout<<"trdej\n";
 
                     mappingout.push_back(ali);
                 
-
+std::cout << "ach schit \n";
                rundenzaehler++;
                 }else{
                     //no need to do sth. here
@@ -1175,6 +1168,7 @@ std::cout<<"trdej\n";
      
         ThreadPool threadPool(std::max(1, programOptions->threads));
        ThreadPool::ParallelForHandle pforHandle;
+std::cout<<"noch mehr schit\n";
 
        //function that maps all 4 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF , 3NRC_Query - 3NRC_REF and 3NQuery - 3NRC_REF
         auto mapfk=[&](auto begin, auto end, int /*threadid*/){
