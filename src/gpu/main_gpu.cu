@@ -496,6 +496,7 @@ struct WindowBatchProcessor{
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
+     //IDEE mache ein threadpool für den CtoT converter
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
