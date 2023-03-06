@@ -28,3 +28,4 @@ reads_test.fasta
 reads.fasta
 shortreads_1.fastq
 shortreads_2.fastq
+logfile.txt
