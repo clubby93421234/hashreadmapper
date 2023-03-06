@@ -534,6 +534,17 @@
         }
 
         HD_WARNING_DISABLE
+        template<class IndexTransformation>
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr void NucleotideConverterInplace2Bit_CtoT(unsigned int* encodedsequence,int begin, int sequenceLength, IndexTransformation indextrafo) noexcept{
+            const int ints = getEncodedNumInts2BitHiLo(sequenceLength);
+            for (int i=begin; i<ints; ++i){
+                if( encodedsequence[indextrafo(i)] == encodedbaseC() ){
+                    encodedsequence[indextrafo(i)]=encodedbaseT();
+                }
+            }
+        }
+        HD_WARNING_DISABLE
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
         static constexpr void NucleotideConverterVectorInplace_CtoT(std::vector<char> *vec, int veclength) noexcept{
             for (int i=0; i<veclength; ++i){
@@ -542,7 +553,15 @@
                 }
             }
         }
-
+        HD_WARNING_DISABLE
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr void NucleotideConverterVectorInplace_CtoT(std::vector<char> *vec,int begin, int veclength) noexcept{
+            for (int i=begin; i<veclength; ++i){
+                if(vec->at(i)=='C'){
+                    vec->at(i)='T';
+                }
+            }
+        }
         HD_WARNING_DISABLE
         template<class IndexTransformation>
         HOSTDEVICEQUALIFIER INLINEQUALIFIER

@@ -492,11 +492,11 @@ struct WindowBatchProcessor{
       
         }
         if(ReverseComplementBatch)
-            SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());
+           SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());                  
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
-     //IDEE mache ein threadpool für den CtoT converter
+     //IDEE mache ein threadpool für den CtoT converter  
         SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
@@ -1106,16 +1106,16 @@ void printtoSAM(){
                     resultRC.position;
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
-std::cout<<"trdej"<<windowlengthRC<<"\n";
+//std::cout<<"trdej"<<windowlengthRC<<"\n";
                 //RC the chromosome, then get the needed window
-                std::string rev;
+               std::string rev;
                 rev.resize(genomesequenceRC.size());
-                std::cout<<"zzzhz\n";
+          //      std::cout<<"zzzhz\n";
                 //TODO #4 Speicherzugrifffehler beheben!!
                 SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),genomesequenceRC.size());
-                std::cout<<"srgr\n";
+           //     std::cout<<"srgr\n";
                 std::string_view windowRC(rev.c_str() + resultRC.position, windowlengthRC);
-                std::cout<<"aswedf\n";
+           //     std::cout<<"aswedf\n";
                 processedResults++;
 
                 int32_t maskLen = readLengths[0]/2;
@@ -1157,7 +1157,7 @@ std::cout<<"trdej"<<windowlengthRC<<"\n";
 
                     mappingout.push_back(ali);
                 
-std::cout << "ach schit \n";
+//std::cout << "ach schit \n";
                rundenzaehler++;
                 }else{
                     //no need to do sth. here
@@ -1173,7 +1173,7 @@ std::cout<<"noch mehr schit\n";
 
        //function that maps all 4 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF , 3NRC_Query - 3NRC_REF and 3NQuery - 3NRC_REF
         auto mapfk=[&](auto begin, auto end, int /*threadid*/){
-            std::cout<<"i am doing my job!\n";
+           // std::cout<<"i am doing my job!\n";
                 for(auto i=begin; i< end; i++){
 
                     // 3NQuery-3NREF
