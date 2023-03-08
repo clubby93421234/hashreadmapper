@@ -159,7 +159,6 @@ struct Genome{
             data.emplace( chromosomeId, SequenceHelpers::reverseComplementSequenceDecoded( &sequence[0], sequence.size()) );
             names.emplace_back( old.names[chromosomeId] );
             
-            //std::cout << names[chromosomeId] << ", length " << sequence.size() << "\n";
         }
     }
 

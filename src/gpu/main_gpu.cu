@@ -491,8 +491,9 @@ struct WindowBatchProcessor{
             );
       
         }
-        if(ReverseComplementBatch)
-           SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());                  
+      
+      //  if(ReverseComplementBatch)
+      //     SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());                  
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
@@ -634,7 +635,7 @@ struct WindowBatchProcessor{
         assert(std::all_of(batch.chromosomeIds.begin(), batch.chromosomeIds.end(), [&](int id){ return id == batch.chromosomeIds[0];}));
         assert(std::is_sorted(batch.positions.begin(), batch.positions.end()));
 
-//TODO muss ich hier 3-N machen?
+
         Genome::Section genomicSection = batch.genome->getSectionOfGenome(
             batch.chromosomeIds[0], 
             batch.positions[0] - maxReadLength / 2,
@@ -865,10 +866,12 @@ struct Mappinghandler
         Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
+            cons Genome* genomeRC_,
              std::vector<MappedRead>* results_,
              std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
+        genomeRC(genomeRC_),
         genome(genome_),
         results(results_),
         resultsRC(resultsRC_)
@@ -957,6 +960,7 @@ struct Mappinghandler
     private:
         const ProgramOptions* programOptions;
         const Genome* genome;
+        const Genome* genomeRC;
         int mappertype=1;
         std::vector<MappedRead>* results;
         std::vector<MappedRead>* resultsRC;
@@ -1815,6 +1819,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
     Genome genome(programOptions.genomefile);
     Genome genomeRC(genome);
     genometimer.print();
+//    genomeRC.printInfo();
     //genome.printInfo();
     std::cout << "Loading finished\n";
 
@@ -1887,7 +1892,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     helpers::CpuTimer timerprocessgenome("process genome");
 
-    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize);
+    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize) *2;
 
     std::size_t processedWindowCount = 0;
     std::size_t processedWindowCountProgress = 0;
@@ -1907,10 +1912,11 @@ void performMappingGpu(const ProgramOptions& programOptions){
         windowHitStatsAfterHammingDistancePtr
     );
 
-//TODO #6 it parrallel for RC and normal genome
-    auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
-        windowBatchProcessor(batch,false);
-        windowBatchProcessor(batch,true);
+//TODO #6 do it parrallel for RC and normal genome
+
+bool RCorNOT=false;
+     auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
+        windowBatchProcessor(batch,RCorNOT);
 
         processedWindowCount += batch.numWindows;
         processedWindowCountProgress += batch.numWindows;
@@ -1930,14 +1936,22 @@ void performMappingGpu(const ProgramOptions& programOptions){
         programOptions.batchsize,
         processWithProgress
     );
-    
+RCorNOT=true;
+genomeRC.forEachBatchOfWindows(
+        programOptions.kmerlength,
+        programOptions.windowSize,
+        programOptions.batchsize,
+        processWithProgress
+    );
+
+
     std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
     
    
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
-    Mappinghandler mapper(&programOptions, &genome, &results, &resultsRC);
+    Mappinghandler mapper(&programOptions, &genome, &genomeRC, &results, &resultsRC);
 
     helpers::CpuTimer timermapping("process mapping");
 
