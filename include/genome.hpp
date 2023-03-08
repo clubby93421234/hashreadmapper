@@ -11,6 +11,7 @@
 #include <string_view>
 #include <map>
 
+#include <sequencehelpers.hpp>
 
 struct FastaIndex{
 public:
@@ -147,6 +148,21 @@ struct Genome{
             success = getNextSequence();
         }
     }
+    //copy Genome and saves as Reversecomplement
+    Genome(const Genome& old){
+        for(std::size_t chromosomeId = 0; chromosomeId < old.names.size(); chromosomeId++){
+
+            auto mapiter = old.data.find(chromosomeId);
+            assert(mapiter != old.data.end());
+            const auto& sequence = mapiter->second;
+
+            data.emplace( chromosomeId, SequenceHelpers::reverseComplementSequenceDecoded( &sequence[0], sequence.size()) );
+            names.emplace_back( old.names[chromosomeId] );
+            
+            //std::cout << names[chromosomeId] << ", length " << sequence.size() << "\n";
+        }
+    }
+
 
     void printInfo() const{
         for(std::size_t chromosomeId = 0; chromosomeId < names.size(); chromosomeId++){

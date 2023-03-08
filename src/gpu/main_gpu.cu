@@ -1060,14 +1060,15 @@ void printtoSAM(){
         
         const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
 
-        std::size_t rundenzaehler=0;
+        
 
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
-
+std::cout<<"resultssize: "<<results->size()<<"\n";
+std::cout<<"resultsRCsize: "<<resultsRC->size()<<"\n";
         for(std::size_t r = 0, processedResults = 0; r < numreads; r++){
             const auto& result = (*results)[r];
             const auto& resultRC = (*resultsRC)[r];
-            //TODO -> get the shit for RC batch and do alignment. then update and ccompare. upload best to sam
+            
             read_number readId = r;
             
             std::vector<int> readLengths(1);
@@ -1106,16 +1107,18 @@ void printtoSAM(){
                     resultRC.position;
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
-//std::cout<<"trdej"<<windowlengthRC<<"\n";
+
+//std::cout<<"trdej"<<windowlengthRC<<" zyklus:"<<readId<<"\n";
+
                 //RC the chromosome, then get the needed window
                std::string rev;
                 rev.resize(genomesequenceRC.size());
-          //      std::cout<<"zzzhz\n";
-                //TODO #4 Speicherzugrifffehler beheben!!
+   //  std::cout<<"genomesequenceRC.size()\n";
+               
                 SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),genomesequenceRC.size());
-           //     std::cout<<"srgr\n";
+    //     std::cout<<"srgr\n";
                 std::string_view windowRC(rev.c_str() + resultRC.position, windowlengthRC);
-           //     std::cout<<"aswedf\n";
+      //     std::cout<<"aswedf\n";
                 processedResults++;
 
                 int32_t maskLen = readLengths[0]/2;
@@ -1151,14 +1154,14 @@ void printtoSAM(){
                     ali.result=result;
                     ali.resultRC=resultRC;
                     
-                    ali.rev=rev;  //RC the chromosome, then get the needed window
+                    //ali.rev=rev;  //böse!!
                     ali.windowlength=windowlength;
                     ali.windowlengthRC=windowlengthRC;
 
                     mappingout.push_back(ali);
                 
-//std::cout << "ach schit \n";
-               rundenzaehler++;
+       // std::cout << "ach schit \n";
+               
                 }else{
                     //no need to do sth. here
                 }
@@ -1225,7 +1228,7 @@ std::cout<<"noch mehr schit\n";
        
         std::size_t start=0;
         threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
-       std::cout<<"mapped, now to recalculaion of AS:...\n";
+       std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
@@ -1240,23 +1243,23 @@ std::cout<<"noch mehr schit\n";
                 case 0: // 3NQuery-3NREF
                     ref=&aa.ref;
                    // std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength);
-                    RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
+                    //RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
                     query=&aa.query;
                     break;
                 case 1:// 3NRC_Query-3NREF
                     query=&aa.rc_query;
                     ref=&aa.ref;
-                    RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
+                   // RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
                     break;
                 case 2: // 3NRC_Query - 3NRC_REF
                     query=&aa.rc_query;
                     ref=&aa.rc_ref;
-                    RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
+                   // RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
                 case 3:  // 3NQuery - 3NRC_REF
                     query=&aa.query;
                     ref=&aa.rc_ref;
-                    RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
+                   // RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
                     break;
 
                 default:
@@ -1808,7 +1811,10 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     
     std::cout << "Loading genome\n";
+    helpers::CpuTimer genometimer("genometimer");
     Genome genome(programOptions.genomefile);
+    Genome genomeRC(genome);
+    genometimer.print();
     //genome.printInfo();
     std::cout << "Loading finished\n";
 
@@ -1890,6 +1896,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
     std::vector<MappedRead> results(multiGpuReadStorage.getNumberOfReads());
     //results for rc 3n genome
     std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
+
     WindowBatchProcessor windowBatchProcessor(
         gpuReadStorage,
         gpuMinhasher,
