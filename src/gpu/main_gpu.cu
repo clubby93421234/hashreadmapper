@@ -1907,6 +1907,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
         windowHitStatsAfterHammingDistancePtr
     );
 
+//TODO #6 it parrallel for RC and normal genome
     auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
         windowBatchProcessor(batch,false);
         windowBatchProcessor(batch,true);
