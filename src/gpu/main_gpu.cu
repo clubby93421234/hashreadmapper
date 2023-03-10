@@ -492,13 +492,20 @@ struct WindowBatchProcessor{
       
         }
       
-      //  if(ReverseComplementBatch)
-      //     SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());                  
+                
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
      //IDEE mache ein threadpool für den CtoT converter  
-        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
+#pragma omp parallel for
+    for(std::size_t i=0; i < h_windowsDecoded.size(); ++i){  
+                if(h_windowsDecoded.at(i)=='C'){
+                    h_windowsDecoded.at(i)='T';
+                }
+            
+    }
+
+        
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
@@ -866,7 +873,7 @@ struct Mappinghandler
         Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
-            cons Genome* genomeRC_,
+            const Genome* genomeRC_,
              std::vector<MappedRead>* results_,
              std::vector<MappedRead>* resultsRC_
              ):
@@ -1894,60 +1901,72 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize) *2;
 
-    std::size_t processedWindowCount = 0;
-    std::size_t processedWindowCountProgress = 0;
+    
 
     //results for 3n genome
     std::vector<MappedRead> results(multiGpuReadStorage.getNumberOfReads());
     //results for rc 3n genome
     std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
 
-    WindowBatchProcessor windowBatchProcessor(
-        gpuReadStorage,
-        gpuMinhasher,
-        &programOptions,
-        results.data(),
-        resultsRC.data(),
-        windowHitStatsAfterHashingPtr,
-        windowHitStatsAfterHammingDistancePtr
-    );
-
-//TODO #6 do it parrallel for RC and normal genome
-
-bool RCorNOT=false;
-     auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
-        windowBatchProcessor(batch,RCorNOT);
-
-        processedWindowCount += batch.numWindows;
-        processedWindowCountProgress += batch.numWindows;
-        if(programOptions.showProgress){
-            if(processedWindowCountProgress >= 100000){
-                std::cout << "processed " << processedWindowCount << " / " << totalWindowCount << "\n";
-                processedWindowCountProgress -= 100000;
-            }
-        }
+ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
+       ThreadPool::ParallelForHandle pforHandle;
        
+        auto mapfk=[&](auto begin, auto end, int /*threadid*/){
+           // std::cout<<"i am doing my job!\n";
+                for(auto i=begin; i< end; i++){
+                std::size_t processedWindowCount = 0;
+                std::size_t processedWindowCountProgress = 0;
+
+                    WindowBatchProcessor windowBatchProcessor(
+                    gpuReadStorage,
+                    gpuMinhasher,
+                    &programOptions,
+                    results.data(),
+                    resultsRC.data(),
+                    windowHitStatsAfterHashingPtr,
+                    windowHitStatsAfterHammingDistancePtr
+                     );
+
+                    auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
+                            windowBatchProcessor(batch,i);
+
+                            processedWindowCount += batch.numWindows;
+                            processedWindowCountProgress += batch.numWindows;
+                            if(programOptions.showProgress){
+                                if(processedWindowCountProgress >= 100000){
+                                    std::cout << "processed " << processedWindowCount << " / " << totalWindowCount << "\n";
+                                    processedWindowCountProgress -= 100000;
+                                }
+                            }       
+                    };
+
+                if(i){
+        genomeRC.forEachBatchOfWindows(
+            programOptions.kmerlength,
+            programOptions.windowSize,
+            programOptions.batchsize,
+            processWithProgress
+        );
+                }
+                else{
+        genome.forEachBatchOfWindows(
+            programOptions.kmerlength,
+            programOptions.windowSize,
+            programOptions.batchsize,
+            processWithProgress
+        );
+            }
+
+
+                    
+                }
+                std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
+        };
         
-    };
-    
-    genome.forEachBatchOfWindows(
-        programOptions.kmerlength,
-        programOptions.windowSize,
-        programOptions.batchsize,
-        processWithProgress
-    );
-RCorNOT=true;
-genomeRC.forEachBatchOfWindows(
-        programOptions.kmerlength,
-        programOptions.windowSize,
-        programOptions.batchsize,
-        processWithProgress
-    );
-
-
-    std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
-    
-   
+       
+        std::size_t start=0;
+        std::size_t end=2;
+        threadPool.parallelFor(pforHandle, start , end ,mapfk);
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
