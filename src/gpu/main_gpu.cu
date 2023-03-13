@@ -496,16 +496,18 @@ struct WindowBatchProcessor{
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
-     //IDEE mache ein threadpool für den CtoT converter  
-#pragma omp parallel for
-    for(std::size_t i=0; i < h_windowsDecoded.size(); ++i){  
+ 
+//#pragma omp parallel for
+   
+   /* for(std::size_t i=0; i < h_windowsDecoded.size(); ++i){  
                 if(h_windowsDecoded.at(i)=='C'){
                     h_windowsDecoded.at(i)='T';
                 }
             
-    }
+    }*/ 
+ //   helpers::CpuTimer arschlochgottlelag("bullschit");
 
-        
+        //SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
@@ -854,7 +856,7 @@ struct WindowBatchProcessor{
         }
         nvtx::pop_range();
         #endif
-        
+   //     arschlochgottlelag.print();
     }
 
 };
@@ -1171,7 +1173,7 @@ std::cout<<"resultsRCsize: "<<resultsRC->size()<<"\n";
 
                     mappingout.push_back(ali);
                 
-       // std::cout << "ach schit \n";
+     //   std::cout << "ach schit \n";
                
                 }else{
                     //no need to do sth. here
