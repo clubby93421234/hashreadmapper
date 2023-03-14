@@ -59,7 +59,7 @@
 #include "constants.hpp"
 #include "varianthandler.hpp"
 
-
+#include"safequeue.hpp"
 
 
 using namespace care;
@@ -491,13 +491,23 @@ struct WindowBatchProcessor{
             );
       
         }
-        if(ReverseComplementBatch)
-           SequenceHelpers::reverseComplementSequenceDecodedInplaceVector(&h_windowsDecoded, h_windowsDecoded.size());                  
+      
+                
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
         // do Nucleotide conversion here
      //TODO #5 perfomence hier ist kaka
-     //IDEE mache ein threadpool für den CtoT converter  
-        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
+ 
+//#pragma omp parallel for
+   
+   /* for(std::size_t i=0; i < h_windowsDecoded.size(); ++i){  
+                if(h_windowsDecoded.at(i)=='C'){
+                    h_windowsDecoded.at(i)='T';
+                }
+            
+    }*/ 
+ //   helpers::CpuTimer arschlochgottlelag("bullschit");
+
+        //SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
@@ -634,7 +644,7 @@ struct WindowBatchProcessor{
         assert(std::all_of(batch.chromosomeIds.begin(), batch.chromosomeIds.end(), [&](int id){ return id == batch.chromosomeIds[0];}));
         assert(std::is_sorted(batch.positions.begin(), batch.positions.end()));
 
-//TODO muss ich hier 3-N machen?
+
         Genome::Section genomicSection = batch.genome->getSectionOfGenome(
             batch.chromosomeIds[0], 
             batch.positions[0] - maxReadLength / 2,
@@ -846,7 +856,7 @@ struct WindowBatchProcessor{
         }
         nvtx::pop_range();
         #endif
-        
+   //     arschlochgottlelag.print();
     }
 
 };
@@ -865,10 +875,12 @@ struct Mappinghandler
         Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
+            const Genome* genomeRC_,
              std::vector<MappedRead>* results_,
              std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
+        genomeRC(genomeRC_),
         genome(genome_),
         results(results_),
         resultsRC(resultsRC_)
@@ -891,7 +903,7 @@ struct Mappinghandler
             switch(programOptions->mappType){
                 case MapperType::primitiveSW : 
                     std::cout<<"primitive SW selected but should not be used!\n"; 
-                    primitiveSW(cpuReadStorage_);
+                    //primitiveSW(cpuReadStorage_);
                     break;
                 case MapperType::SW : 
                     //std::cout<<"SW selected \n"; 
@@ -957,6 +969,7 @@ struct Mappinghandler
     private:
         const ProgramOptions* programOptions;
         const Genome* genome;
+        const Genome* genomeRC;
         int mappertype=1;
         std::vector<MappedRead>* results;
         std::vector<MappedRead>* resultsRC;
@@ -1057,7 +1070,7 @@ void printtoSAM(){
 
         StripedSmithWaterman::Aligner aligner;
         StripedSmithWaterman::Filter filter;
-        
+        std::mutex mappinglock;
         const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
 
         
@@ -1065,7 +1078,17 @@ void printtoSAM(){
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
 std::cout<<"resultssize: "<<results->size()<<"\n";
 std::cout<<"resultsRCsize: "<<resultsRC->size()<<"\n";
-        for(std::size_t r = 0, processedResults = 0; r < numreads; r++){
+
+
+ThreadPool threadPoolbigfor(std::max(1, programOptions->threads));
+       ThreadPool::ParallelForHandle pforbigfor;
+
+       //a queue to store the results
+    SafeQueue<Mappinghandler::AlignerArguments> sq;
+
+auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
+   // std::cout<<"hi\n";
+   for(std::size_t r = begin, processedResults = 0; r < end; r++){
             const auto& result = (*results)[r];
             const auto& resultRC = (*resultsRC)[r];
             
@@ -1158,18 +1181,26 @@ std::cout<<"resultsRCsize: "<<resultsRC->size()<<"\n";
                     ali.windowlength=windowlength;
                     ali.windowlengthRC=windowlengthRC;
 
-                    mappingout.push_back(ali);
-                
-       // std::cout << "ach schit \n";
+//std::cout << "processed read number: "<<processedResults<<"\n";
+                   
+                    sq.enqueue(ali);
+                       // mappingout.push_back(ali);
+                    
+
+//        std::cout << "ach schit \n";
                
                 }else{
                     //no need to do sth. here
                 }
             
          
-
         }//end of big for loop
+};
      
+     std::size_t bigforstart=0;
+     threadPoolbigfor.parallelFor(pforbigfor, bigforstart , numreads ,bigforfkt);
+       std::cout<<"big for done, now to mapping:...\n";
+
         ThreadPool threadPool(std::max(1, programOptions->threads));
        ThreadPool::ParallelForHandle pforHandle;
 std::cout<<"noch mehr schit\n";
@@ -1360,240 +1391,6 @@ std::cout<<"noch mehr schit\n";
     printtoSAM();
 
 }//end of CSSW-Mapping
-
-     struct Mappcollection{
-        std::string read;
-        std::string gen;
-        std::string consa;
-        std::string consb;
-
-        std::string to_string(){
-            return read+"\t"+
-                gen+"\t"+
-                consa+"\t"+
-                consb+"\n";
-        }
-        void reset(){
-            read.clear();
-            gen.clear();
-            consa.clear();
-            consb.clear();
-        }
-     };
-
-        //Simple Smith-Waterman by https://github.com/ngopal/SimpleSmithWatermanCPP
-     void primitiveSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
-        
-        std::cout<<"dont use it!\n";
-        cpuReadStorage.get();//useless, but i wanted to suppress the "unused cpuReadStorage" warning
-        #ifdef UNGABUNGA //to turn on/off this mapper
-        std::ofstream outputstream("PSW_out.txt");
-        std::vector<std::string> mappingout;
-        Mappcollection mc;
-        std::cout<<"lets go primiiveSW!!\n";
-        const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
-        helpers::CpuTimer primitivswtimer("primitiSW");
-        std::size_t rundenzaehler=0;
-        
-
-
-        std::size_t numreads=cpuReadStorage->getNumberOfReads();
-        //std::cout<<"numreads: "<<numreads<<"\n";
-        
-        for(std::size_t r = 0, processedResults = 0; r < numreads; r++){
-            const auto& result = (*results)[r];
-            read_number readId = r;
-            rundenzaehler++;
-            std::vector<int> readLengths(1);
-            cpuReadStorage->gatherSequenceLengths(
-                readLengths.data(),
-                &readId,
-                1
-            );
-
-            const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
-            std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
-
-            cpuReadStorage->gatherSequences(
-                encodedReads.data(),
-                encodedReadNumInts2Bit,
-                &readId,
-                1
-            );
-
-
-            if(result.orientation == AlignmentOrientation::ReverseComplement){
-                SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-            }
-            auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
-
-            if(result.orientation != AlignmentOrientation::None){
-                //std::cout<<"is alignment orientation != none? ";
-               
-                const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                
-                const std::size_t windowlength = result.position + 
-                    programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
-                    result.position;
-
-                std::string_view window(genomesequence.data() + result.position, windowlength);
-                processedResults++;
-                //helpers::CpuTimer mappingstep("a mapping step ");
-                /*mapping mit readsequence und windows
-                *
-                */
-                //creating matrix and init it with zero's
-                std::size_t* matrix;
-                matrix = (std::size_t*) calloc((readLengths[0]+1)*(windowlength+1),sizeof(std::size_t));
-
-                double penalty=-4;
-                int ind;
-
-                auto findMax = [&](double array[], int length){
-                double max = array[0];
-	            ind = 0;
-
-	            for(int i=1; i<length; i++){
-		            if(array[i] > max){
-			            max = array[i];
-			            ind=i;
-		            }
-	            }
-	            return max;
-                };
-           
-                auto similarityScore = [&](char a, char b){
-                double result;
-	            if(a==b){
-		            result=1;
-	            }else{
-		            result=penalty;
-	            }
-	            return result;
-                };
-
-            double traceback[4];
-
-           // std::cout<<"\n vor init I/J matrixen \n";
-            int* I_i =(int*)malloc((readLengths[0]+1)*(windowlength+1)*sizeof(int));
-            int* I_j =(int*)malloc((readLengths[0]+1)*(windowlength+1)*sizeof(int));
-	        //int I_i[readLengths[0]+1][windowlength+1];
-	        //int I_j[readLengths[0]+1][windowlength+1];
-            //inimatrixtimer.print();
-
-            //std::cout<<"\n nach init I/J matrixen \n";
-            //start populating matrix
-	        for (std::size_t i=1;i<=readLengths[0];i++){
-		        for(std::size_t j=0;j<=windowlength;j++){
-                       // cout << i << " " << j << endl;
-			        traceback[0] = matrix[(i-1)*readLengths[0]+(j-1)]+similarityScore(readsequence[i-1],window[j-1]);
-                    
-			        traceback[1] = matrix[(i-1)*readLengths[0]+j]+penalty;
-			        traceback[2] = matrix[i*readLengths[0]+(j-1)]+penalty;
-			        traceback[3] = 0;
-			        matrix[i*readLengths[0]+j] = findMax(traceback,4);
-			        switch(ind){
-				        case 0:
-					        I_i[i*readLengths[0]+j] = i-1;
-					        I_j[i*readLengths[0]+j] = j-1;
-					    break;
-				        case 1:
-					        I_i[i*readLengths[0]+j] = i-1;
-                            I_j[i*readLengths[0]+j] = j;
-                        break;
-				        case 2:
-				            I_i[i*readLengths[0]+j] = i;
-                            I_j[i*readLengths[0]+j] = j-1;
-                        break;
-				        case 3:
-					        I_i[i*readLengths[0]+j] = i;
-                            I_j[i*readLengths[0]+j] = j;
-                        break;
-			        }
-                }
-	        }
-
-// find the max score in the matrix
-        
-	    double matrix_max = 0;
-	    int i_max=0, j_max=0;
-
-	    for(std::size_t i=1;i<readLengths[0];i++){
-		    for(std::size_t j=1;j<windowlength;j++){
-			    if(matrix[i*readLengths[0]+j]>matrix_max){
-				    matrix_max = matrix[i*readLengths[0]+j];
-				    i_max=i;
-				    j_max=j;
-			    }
-		    }
-	    }   
-        
-	    //std::cout << "Max score in the matrix is " << matrix_max << std::endl;
-
-
-        // traceback
-	
-	    int current_i=i_max,current_j=j_max;
-	    int next_i=I_i[current_i*readLengths[0]+current_j];
-	    int next_j=I_j[current_i*readLengths[0]+current_j];
-	    int tick=0;
-	    char* consensus_a=(char*)malloc((readLengths[0]+windowlength+2)*sizeof(char));
-        char* consensus_b=(char*)malloc((readLengths[0]+windowlength+2)*sizeof(char));
-
-	    while(((current_i!=next_i) || (current_j!=next_j)) && (next_j!=0) && (next_i!=0)){
-
-		    if(next_i==current_i)  consensus_a[tick] = '-';                  // deletion in A
-		    else                   consensus_a[tick] = readsequence[current_i-1];   // match/mismatch in A
-
-		    if(next_j==current_j)  consensus_b[tick] = '-';                  // deletion in B
-		    else                   consensus_b[tick] = window[current_j-1];   // match/mismatch in B
-
-		    current_i = next_i;
-		    current_j = next_j;
-		    next_i = I_i[current_i*readLengths[0]+current_j];
-		    next_j = I_j[current_i*readLengths[0]+current_j];
-		    tick++;
-	    }
-
-            //std::cout<<"\n traceback erledigt \n";
-	//std::cout<<std::endl<<" "<<std::endl;
-	//std::cout<<"Alignment:"<<std::endl<<std::endl;
-	for(int i=0;i<readLengths[0];i++){
-        mc.read+=readsequence[i];
-        } 
-
-       // std::cout<<"  and"<<std::endl;
-	for(std::size_t i=0;i<windowlength;i++){
-        mc.gen+=window[i];
-        }
-
-      //   std::cout<<std::endl<<"consensus a"<<std::endl;  
-	for(std::size_t i=tick-1;i>=0;i--) 
-        mc.consa+=consensus_a[i]; 
-
-	//std::cout<<"\n consensus b"<<std::endl;
-	for(std::size_t j=tick-1;j>=0;j--) 
-        mc.consb+=consensus_b[j];
-	//std::cout<<std::endl;
-
-            mappingout.emplace_back(mc.to_string());
-                mc.reset();
-                free(I_i);
-                free(I_j);
-                free(consensus_a);
-                free(consensus_b);
-                free(matrix);
-            }else{
-
-            }
-
-        }
-        //std::cout<<"out of primitivSW loop\n";
-        for(int i=0;i<mappingout.size();i++){
-            outputstream<<mappingout.at(i);
-        }
-        #endif //to turn on/off this mapper
-      }    
 
         /// @brief THis is a blank fkt for writing your own mapper
         /// @param cpuReadStorage 
@@ -1815,6 +1612,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
     Genome genome(programOptions.genomefile);
     Genome genomeRC(genome);
     genometimer.print();
+//    genomeRC.printInfo();
     //genome.printInfo();
     std::cout << "Loading finished\n";
 
@@ -1887,56 +1685,78 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     helpers::CpuTimer timerprocessgenome("process genome");
 
-    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize);
+    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize) *2;
 
-    std::size_t processedWindowCount = 0;
-    std::size_t processedWindowCountProgress = 0;
+    
 
     //results for 3n genome
     std::vector<MappedRead> results(multiGpuReadStorage.getNumberOfReads());
     //results for rc 3n genome
     std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
 
-    WindowBatchProcessor windowBatchProcessor(
-        gpuReadStorage,
-        gpuMinhasher,
-        &programOptions,
-        results.data(),
-        resultsRC.data(),
-        windowHitStatsAfterHashingPtr,
-        windowHitStatsAfterHammingDistancePtr
-    );
-
-    auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
-        windowBatchProcessor(batch,false);
-        windowBatchProcessor(batch,true);
-
-        processedWindowCount += batch.numWindows;
-        processedWindowCountProgress += batch.numWindows;
-        if(programOptions.showProgress){
-            if(processedWindowCountProgress >= 100000){
-                std::cout << "processed " << processedWindowCount << " / " << totalWindowCount << "\n";
-                processedWindowCountProgress -= 100000;
-            }
-        }
+ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
+       ThreadPool::ParallelForHandle pforHandle;
        
+        auto mapfk=[&](auto begin, auto end, int /*threadid*/){
+           // std::cout<<"i am doing my job!\n";
+                for(auto i=begin; i< end; i++){
+                std::size_t processedWindowCount = 0;
+                std::size_t processedWindowCountProgress = 0;
+
+                    WindowBatchProcessor windowBatchProcessor(
+                    gpuReadStorage,
+                    gpuMinhasher,
+                    &programOptions,
+                    results.data(),
+                    resultsRC.data(),
+                    windowHitStatsAfterHashingPtr,
+                    windowHitStatsAfterHammingDistancePtr
+                     );
+
+                    auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
+                            windowBatchProcessor(batch,i);
+
+                            processedWindowCount += batch.numWindows;
+                            processedWindowCountProgress += batch.numWindows;
+                            if(programOptions.showProgress){
+                                if(processedWindowCountProgress >= 100000){
+                                    std::cout << "processed " << processedWindowCount << " / " << totalWindowCount << "\n";
+                                    processedWindowCountProgress -= 100000;
+                                }
+                            }       
+                    };
+
+                if(i){
+        genomeRC.forEachBatchOfWindows(
+            programOptions.kmerlength,
+            programOptions.windowSize,
+            programOptions.batchsize,
+            processWithProgress
+        );
+                }
+                else{
+        genome.forEachBatchOfWindows(
+            programOptions.kmerlength,
+            programOptions.windowSize,
+            programOptions.batchsize,
+            processWithProgress
+        );
+            }
+
+
+                    
+                }
+                std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
+        };
         
-    };
-    
-    genome.forEachBatchOfWindows(
-        programOptions.kmerlength,
-        programOptions.windowSize,
-        programOptions.batchsize,
-        processWithProgress
-    );
-    
-    std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
-    
-   
+       
+        std::size_t start=0;
+        std::size_t end=2;
+        threadPool.parallelFor(pforHandle, start , end ,mapfk);
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
-    Mappinghandler mapper(&programOptions, &genome, &results, &resultsRC);
+    Mappinghandler mapper(&programOptions, &genome, &genomeRC, &results, &resultsRC);
 
     helpers::CpuTimer timermapping("process mapping");
 
