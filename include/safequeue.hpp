@@ -6,7 +6,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-
+#include <iostream>
 // A threadsafe-queue.
 template <class T>
 class SafeQueue
@@ -26,6 +26,7 @@ public:
   {
     std::lock_guard<std::mutex> lock(m);
     q.push(t);
+    std::cout<<"Queuesize: "q.size()<<"\n";
     c.notify_one();
   }
 
@@ -41,6 +42,7 @@ public:
     }
     T val = q.front();
     q.pop();
+    std::cout<<"Queuesize: "q.size()<<"\n";
     return val;
   }
 
