@@ -507,7 +507,7 @@ struct WindowBatchProcessor{
     }*/ 
  //   helpers::CpuTimer arschlochgottlelag("bullschit");
 
-        //SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
+        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
@@ -1070,18 +1070,14 @@ void printtoSAM(){
 
         StripedSmithWaterman::Aligner aligner;
         StripedSmithWaterman::Filter filter;
-        std::mutex mappinglock;
+     
         const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
 
-        
 
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
-std::cout<<"resultssize: "<<results->size()<<"\n";
-std::cout<<"resultsRCsize: "<<resultsRC->size()<<"\n";
 
-
-ThreadPool threadPoolbigfor(std::max(1, programOptions->threads));
-       ThreadPool::ParallelForHandle pforbigfor;
+        ThreadPool threadPoolbigfor(std::max(1, programOptions->threads));
+        ThreadPool::ParallelForHandle pforbigfor;
 
        //a queue to store the results
     SafeQueue<Mappinghandler::AlignerArguments> sq;
@@ -1112,12 +1108,16 @@ auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
             );
 
 
-            if(result.orientation == AlignmentOrientation::ReverseComplement){
-                SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-            }
+        //    if(result.orientation == AlignmentOrientation::ReverseComplement){
+          //      SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
+           // }
             auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
+if(resultRC.orientation != AlignmentOrientation::None ){
+    
+    std::cout<<" hello\n";
+}
 
-            if(result.orientation != AlignmentOrientation::None){
+            if(result.orientation != AlignmentOrientation::None ){
                
                 const auto& genomesequence = (*genome).data.at(result.chromosomeId);
                 const auto& genomesequenceRC = (*genome).data.at(resultRC.chromosomeId);
@@ -1131,7 +1131,7 @@ auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
 
                 std::string_view window(genomesequence.data() + result.position, windowlength);
 
-//std::cout<<"trdej"<<windowlengthRC<<" zyklus:"<<readId<<"\n";
+        //std::cout<<" zyklus:"<<readId<<" Orientation: "<<static_cast<int>(resultRC.orientation) <<"\n";
 
                 //RC the chromosome, then get the needed window
                std::string rev;
@@ -1184,6 +1184,7 @@ auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
 //std::cout << "processed read number: "<<processedResults<<"\n";
                    
                     sq.enqueue(ali);
+                    std::cout<<"Queue size: "<< sq.get_size() <<"\n";
                        // mappingout.push_back(ali);
                     
 
@@ -1198,6 +1199,7 @@ auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
 };
      
      std::size_t bigforstart=0;
+     std::cout<<"lets go bigfor:...\n";
      threadPoolbigfor.parallelFor(pforbigfor, bigforstart , numreads ,bigforfkt);
        std::cout<<"big for done, now to mapping:...\n";
 
@@ -1258,7 +1260,7 @@ std::cout<<"noch mehr schit\n";
         
        
         std::size_t start=0;
-        threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
+     //   threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
        std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
@@ -1385,7 +1387,7 @@ std::cout<<"noch mehr schit\n";
            
             }
         };
-    threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
+   // threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
  
  
     printtoSAM();
@@ -1613,7 +1615,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
     Genome genomeRC(genome);
     genometimer.print();
 //    genomeRC.printInfo();
-    //genome.printInfo();
+//    genome.printInfo();
     std::cout << "Loading finished\n";
 
     //After minhasher is constructed, remaining gpu memory can be used to store reads
