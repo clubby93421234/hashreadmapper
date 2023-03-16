@@ -59,7 +59,7 @@
 #include "constants.hpp"
 #include "varianthandler.hpp"
 
-#include"safequeue.hpp"
+
 
 
 using namespace care;
@@ -507,7 +507,7 @@ struct WindowBatchProcessor{
     }*/ 
  //   helpers::CpuTimer arschlochgottlelag("bullschit");
 
-        SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
+      //  SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
         //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
@@ -1076,15 +1076,14 @@ void printtoSAM(){
 
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
 
-        ThreadPool threadPoolbigfor(std::max(1, programOptions->threads));
-        ThreadPool::ParallelForHandle pforbigfor;
 
        //a queue to store the results
-    SafeQueue<Mappinghandler::AlignerArguments> sq;
+    
+    std::cout<<"lets go bigfor:...\n";
 
-auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
-   // std::cout<<"hi\n";
-   for(std::size_t r = begin, processedResults = 0; r < end; r++){
+    std::size_t processedResults = 0;
+   for(std::size_t r = 0; r < numreads; r++){
+    
             const auto& result = (*results)[r];
             const auto& resultRC = (*resultsRC)[r];
             
@@ -1108,9 +1107,9 @@ auto bigforfkt=[&](auto begin, auto end, int /*threadid*/){
             );
 
 
-        //    if(result.orientation == AlignmentOrientation::ReverseComplement){
+        //   if(result.orientation == AlignmentOrientation::ReverseComplement){
           //      SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-           // }
+          //  }
             auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
 if(resultRC.orientation != AlignmentOrientation::None ){
     
@@ -1120,27 +1119,18 @@ if(resultRC.orientation != AlignmentOrientation::None ){
             if(result.orientation != AlignmentOrientation::None ){
                
                 const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                const auto& genomesequenceRC = (*genome).data.at(resultRC.chromosomeId);
+                const auto& genomesequenceRC = (*genomeRC).data.at(resultRC.chromosomeId);
 
                 const std::size_t windowlength = result.position + 
                     programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
                     result.position;
                 const std::size_t windowlengthRC = resultRC.position + 
-                    programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
+                    programOptions->windowSize < genomesequenceRC.size() ? programOptions->windowSize : genomesequenceRC.size() - 
                     resultRC.position;
 
-                std::string_view window(genomesequence.data() + result.position, windowlength);
+                std::string_view window(genomesequence.data() + result.position, windowlength);            
+                std::string_view windowRC(genomesequenceRC.data() + resultRC.position, windowlengthRC);
 
-        //std::cout<<" zyklus:"<<readId<<" Orientation: "<<static_cast<int>(resultRC.orientation) <<"\n";
-
-                //RC the chromosome, then get the needed window
-               std::string rev;
-                rev.resize(genomesequenceRC.size());
-   //  std::cout<<"genomesequenceRC.size()\n";
-               
-                SequenceHelpers::reverseComplementSequenceDecoded(&rev[0], genomesequenceRC.c_str(),genomesequenceRC.size());
-    //     std::cout<<"srgr\n";
-                std::string_view windowRC(rev.c_str() + resultRC.position, windowlengthRC);
       //     std::cout<<"aswedf\n";
                 processedResults++;
 
@@ -1166,8 +1156,8 @@ if(resultRC.orientation != AlignmentOrientation::None ){
                     ali.rc_ref=std::string(windowRC).c_str();
                     //SequenceHelpers::reverseComplementSequenceDecoded(ali.ref.data(), windowlength); 
 
-                    ali.three_n_rc_ref.resize(windowlength);
-                    NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlength);
+                    ali.three_n_rc_ref.resize(windowlengthRC);
+                    NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
 
                     ali.filter=filter;
                     ali.maskLen=maskLen;
@@ -1181,11 +1171,8 @@ if(resultRC.orientation != AlignmentOrientation::None ){
                     ali.windowlength=windowlength;
                     ali.windowlengthRC=windowlengthRC;
 
-//std::cout << "processed read number: "<<processedResults<<"\n";
-                   
-                    sq.enqueue(ali);
-                    std::cout<<"Queue size: "<< sq.get_size() <<"\n";
-                       // mappingout.push_back(ali);
+
+                        mappingout.push_back(ali);
                     
 
 //        std::cout << "ach schit \n";
@@ -1196,11 +1183,11 @@ if(resultRC.orientation != AlignmentOrientation::None ){
             
          
         }//end of big for loop
-};
+
      
-     std::size_t bigforstart=0;
-     std::cout<<"lets go bigfor:...\n";
-     threadPoolbigfor.parallelFor(pforbigfor, bigforstart , numreads ,bigforfkt);
+
+    
+   
        std::cout<<"big for done, now to mapping:...\n";
 
         ThreadPool threadPool(std::max(1, programOptions->threads));

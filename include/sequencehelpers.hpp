@@ -547,11 +547,7 @@
         HD_WARNING_DISABLE
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
         static constexpr void NucleotideConverterVectorInplace_CtoT(std::vector<char> *vec, int veclength) noexcept{
-            for (int i=0; i<veclength; ++i){
-                if(vec->at(i)=='C'){
-                    vec->at(i)='T';
-                }
-            }
+            NucleotideConverterVectorInplace_CtoT(vec, 0, veclength);
         }
         HD_WARNING_DISABLE
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
