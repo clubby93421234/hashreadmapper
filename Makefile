@@ -35,6 +35,7 @@ SOURCES_GPU_VERSION = \
     src/gpu/main_gpu.cu \
 	src/gpu/gpuminhasherconstruction.cu \
 	src/gpu/sequenceconversionkernels.cu \
+	src/gpu/mappinghandler.cu \
 	src/ssw_cpp.cpp \
 	src/ssw.c \
 	src/cigar.cpp \
@@ -143,6 +144,9 @@ $(DIR)/gpuminhasherconstruction.o : src/gpu/gpuminhasherconstruction.cu
 	$(CUDA_COMPILE)
 
 $(DIR)/sequenceconversionkernels.o : src/gpu/sequenceconversionkernels.cu
+	$(CUDA_COMPILE)
+
+$(DIR)/mappinghandler.o : src/gpu/mappinghandler.cu
 	$(CUDA_COMPILE)
 
 
