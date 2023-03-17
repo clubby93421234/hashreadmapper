@@ -201,7 +201,7 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                     SequenceHelpers::reverseComplementSequenceInplace2BitHiLo(mySharedCandidate, candidateLength, block_transposed_index);
                 }
 
-              SequenceHelpers::NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
+         //     SequenceHelpers::NucleotideConverterInplace2Bit_CtoT(mySharedCandidate, candidateLength, block_transposed_index);
                 
                 //save anchor in shared memory
                 for(int i = 0; i < anchorints; i++) {
@@ -237,10 +237,10 @@ void shiftedHammingDistanceWithFullOverlapKernelSmem1(
                 }
                 
                 //after the first iteration. Reset the read to do RC and then 3N it
-                if(orientation==0)
-                for(int i = 0; i < candidateints; i++) {
-                    mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
-                }
+           //     if(orientation==0)
+           //     for(int i = 0; i < candidateints; i++) {
+           //         mySharedCandidate[block_transposed_index(i)] = candidateptr[i * numCandidates];
+           //     }
             }
 
             d_bestShifts[candidateIndex] = bestShift;
