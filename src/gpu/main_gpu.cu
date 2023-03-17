@@ -1083,7 +1083,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     helpers::CpuTimer timerprocessgenome("process genome");
 
-    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize) *2;
+    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize);
 
     
 
