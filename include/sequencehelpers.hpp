@@ -30,7 +30,11 @@
             n = ((n >> 16) & 0x0000FFFFu) | ((n & 0x0000FFFFu) << 16);
             return ((unsigned int)(-1) - n) >> (8 * sizeof(n) - (16 << 1));
         }
-
+/*Dieser Codeausschnitt enthält eine statische, constexpr-Methode namens "compute_",
+die eine Eingabe in Form einer 64-Bit-Ganzzahl "n" erwartet und eine 64-Bit-Ganzzahl als Rückgabe liefert.
+Die Methode scheint eine Operation zur Umkehrung der Reihenfolge der Bits in "n" durchzuführen, 
+indem sie die Bits in "n" an bestimmten Stellen verschiebt und dann bitweise mit einer bitweisen ODER-Operation verknüpft.
+*/
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
         static constexpr std::uint64_t compute_(std::uint64_t n) noexcept{
             n = ((n >> 2)  & 0x3333333333333333ull) | ((n & 0x3333333333333333ull) << 2);
