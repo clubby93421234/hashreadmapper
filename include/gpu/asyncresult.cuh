@@ -1,3 +1,15 @@
+/*Dieser Code definiert die Struktur "AsyncConstBufferWrapper" und eine Funktion "makeAsyncConstBufferWrapper", 
+die in CUDA-Programmen verwendet wird, um asynchron auf konstante Speicherbereiche zuzugreifen.
+Die Struktur "AsyncConstBufferWrapper" enthält einen Zeiger auf einen konstanten Speicherbereich sowie ein Ereignis, das signalisiert,
+wenn der Speicherbereich bereit ist. 
+Die Funktionen "wait" und "ready" werden verwendet, um auf das Ereignis zu warten oder zu überprüfen,
+ob es bereits aufgetreten ist. 
+Die Funktion "linkStream" wird verwendet, um sicherzustellen, dass Arbeit, die nach einem bestimmten Stream 
+eingereicht wird, erst ausgeführt wird, wenn der konstante Speicherbereich bereit ist.
+Die Funktion "makeAsyncConstBufferWrapper" erstellt eine Instanz von "AsyncConstBufferWrapper" und gibt sie zurück.
+Es akzeptiert einen Zeiger auf den konstanten Speicherbereich und ein Ereignis, das signalisiert, wann der Speicherbereich bereit ist (optional).
+Wenn kein Ereignis angegeben wird, wird der Speicherbereich als sofort bereit betrachtet.*/
+
 #ifndef CARE_ASYNC_RESULT_CUH
 #define CARE_ASYNC_RESULT_CUH
 
