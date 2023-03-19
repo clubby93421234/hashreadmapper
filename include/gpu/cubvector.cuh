@@ -1,3 +1,10 @@
+
+/*Die Klasse CachedDeviceUVector ist eine template-basierte Klasse, die einen Cache-Device-Allocator für ein Array auf der GPU darstellt.
+Sie ist so konzipiert, dass sie den Gerätespeicher verwaltet, Speicher zuweist und freigibt, ihn neu dimensioniert und neu organisiert und
+einen bequemen Zugriff auf die Array-Daten bietet. 
+Diese Implementierung nutzt die CUB-Bibliothek für effizientes Gerätespeichermanagement und CUDA-Stream-Management.
+*/
+
 #ifndef CARE_CUBVECTOR_CUH
 #define CARE_CUBVECTOR_CUH
 
