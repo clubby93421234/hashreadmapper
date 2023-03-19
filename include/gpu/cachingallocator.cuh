@@ -1,3 +1,18 @@
+/*Dies ist eine C++-Header-Datei, die eine benutzerdefinierte Allocator-Klasse namens ThrustCachingAllocator definiert. 
+Es erbt von der Klasse thrust::device_malloc_allocator, die ein Standard-Allocator der Thrust-Bibliothek für die Speicherzuweisung auf dem Gerät ist.
+Der Zweck von ThrustCachingAllocator ist es, einen Caching-Mechanismus für die Gerätespeicherzuweisung bereitzustellen.
+Hierzu wird die CUB (CUDA UnBound)-Bibliothek verwendet, die eine Reihe von Hochleistungsprimitiven für CUDA bereitstellt.
+Insbesondere wird die Klasse cub::CachingDeviceAllocator verwendet, die einen effizienten Caching-Mechanismus für die Gerätespeicherzuweisung bereitstellt.
+Die ThrustCachingAllocator-Klasse hat in ihrem Konstruktor drei Argumente: deviceId, cubAllocator und stream. 
+deviceId ist eine Ganzzahl, die die ID des Geräts darstellt, für das Speicher zugewiesen wird. 
+cubAllocator ist ein Zeiger auf ein Objekt vom Typ cub::CachingDeviceAllocator, das zur Verwaltung des Cachings von Gerätespeicher verwendet wird.
+stream ist ein CUDA-Stream, auf dem Speicheroperationen ausgeführt werden.
+Die allocate-Methode wird überschrieben, um Gerätespeicher mithilfe von cub::CachingDeviceAllocator zuzuweisen, wenn es verfügbar ist,
+andernfalls wird auf cudaMalloc zurückgegriffen. 
+Die deallocate-Methode wird überschrieben, um Gerätespeicher mithilfe von cub::CachingDeviceAllocator freizugeben, wenn es verfügbar ist,
+andernfalls wird auf cudaFree zurückgegriffen.
+Dieser benutzerdefinierte Allocator ist für die Verwendung mit der Thrust-Bibliothek für leistungsstarke GPU-Computing in C++ konzipiert.*/
+
 #ifndef CACHING_ALLOCATOR_CUH
 #define CACHING_ALLOCATOR_CUH
 
