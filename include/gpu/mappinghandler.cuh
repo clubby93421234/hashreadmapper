@@ -68,9 +68,10 @@ struct AlignerArguments{
             std::string three_n_query;   //3 nucleotide query
           std::string rc_query;
             std::string three_n_rc_query;
+
          std::string ref;//the window of the reference genome
             std::string three_n_ref;
-         std::string rc_ref;
+         std::string rc_ref; //the window of the reference genomeRC
             std::string three_n_rc_ref;
 
         std::string sam_tag;
@@ -87,9 +88,9 @@ struct AlignerArguments{
         std::vector<StripedSmithWaterman::Alignment> alignments;
         std::vector<int> num_conversions;
 
-            AlignerArguments():alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment(),
-                                            StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
-                            num_conversions({0,0,0,0})
+            AlignerArguments():
+                            alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
+                            num_conversions({0,0})
             {
             }
 
