@@ -416,7 +416,7 @@ struct WindowBatchProcessor{
     const gpu::GpuMinhasher* gpuMinhasher;
     const ProgramOptions* programOptions;
     MappedRead* results;
-    MappedRead* resultsRC;
+  //  MappedRead* resultsRC;
     WindowHitStatisticCollector* windowHitStatsAfterHashing;
     WindowHitStatisticCollector* windowHitStatsAfterHammingDistance;
 
@@ -428,14 +428,14 @@ struct WindowBatchProcessor{
         const gpu::GpuMinhasher* gpuMinhasher_,
         const ProgramOptions* programOptions_,
         MappedRead* results_,
-        MappedRead* resultsRC_,
+      //  MappedRead* resultsRC_,
         WindowHitStatisticCollector* windowHitStatsAfterHashing_,
         WindowHitStatisticCollector* windowHitStatsAfterHammingDistance_
     ) : gpuReadStorage(gpuReadStorage_),
         gpuMinhasher(gpuMinhasher_),
         programOptions(programOptions_),
         results(results_),
-        resultsRC(resultsRC_),
+    //    resultsRC(resultsRC_),
         windowHitStatsAfterHashing(windowHitStatsAfterHashing_),
         windowHitStatsAfterHammingDistance(windowHitStatsAfterHammingDistance_),
         minhashHandle(gpuMinhasher->makeMinhasherHandle()),
@@ -451,7 +451,10 @@ struct WindowBatchProcessor{
 
 
 
-    void operator()(const Genome::BatchOfWindows& batch, bool ReverseComplementBatch){
+    void operator()(const Genome::BatchOfWindows& batch
+   // , bool ReverseComplementBatch
+   )
+    {
 
         auto* mr = rmm::mr::get_current_device_resource();
         cudaStream_t stream = cudaStreamPerThread;
@@ -788,9 +791,9 @@ struct WindowBatchProcessor{
 
                     //i have to define currentBestResult and then i redefine it depending if RC or not
                     auto& currentBestResult = results[hostIds.h_readIds[offset + r]];
-                if(ReverseComplementBatch){
-                    auto& currentBestResult = resultsRC[hostIds.h_readIds[offset + r]];
-                }
+            //    if(ReverseComplementBatch){
+            //        auto& currentBestResult = resultsRC[hostIds.h_readIds[offset + r]];
+            //    }
             //                auto& currentBestResult = results[hostIds.h_readIds[offset + r]];
 
                 //if the computed alignment is "good"
@@ -1083,14 +1086,14 @@ void performMappingGpu(const ProgramOptions& programOptions){
 
     helpers::CpuTimer timerprocessgenome("process genome");
 
-    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize) *2;
+    const std::size_t totalWindowCount = genome.getTotalNumWindows(programOptions.kmerlength, programOptions.windowSize);
 
     
 
     //results for 3n genome
     std::vector<MappedRead> results(multiGpuReadStorage.getNumberOfReads());
     //results for rc 3n genome
-    std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
+   // std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
 
 ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
        ThreadPool::ParallelForHandle pforHandle;
@@ -1106,13 +1109,13 @@ ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  
                     gpuMinhasher,
                     &programOptions,
                     results.data(),
-                    resultsRC.data(),
+                   // resultsRC.data(),
                     windowHitStatsAfterHashingPtr,
                     windowHitStatsAfterHammingDistancePtr
                      );
 
                     auto processWithProgress = [&](const Genome::BatchOfWindows& batch){
-                            windowBatchProcessor(batch,i);
+                            windowBatchProcessor(batch);
 
                             processedWindowCount += batch.numWindows;
                             processedWindowCountProgress += batch.numWindows;
@@ -1154,7 +1157,9 @@ ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
-    Mappinghandler mapper(&programOptions, &genome, &genomeRC, &results, &resultsRC);
+    Mappinghandler mapper(&programOptions, &genome, &genomeRC, &results
+   // , &resultsRC
+    );
 
     helpers::CpuTimer timermapping("process mapping");
 

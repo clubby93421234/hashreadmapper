@@ -44,8 +44,9 @@ class Mappinghandler{
             const ProgramOptions* programOptions_,
             const Genome* genome_,
             const Genome* genomeRC_,
-             std::vector<MappedRead>* results_,
-             std::vector<MappedRead>* resultsRC_);
+             std::vector<MappedRead>* results_
+         //    ,             std::vector<MappedRead>* resultsRC_
+             );
         ~Mappinghandler();
 
         void go(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage_);
@@ -57,7 +58,7 @@ class Mappinghandler{
         const Genome* genomeRC;
         int mappertype=1;
         std::vector<MappedRead>* results;
-        std::vector<MappedRead>* resultsRC;
+       // std::vector<MappedRead>* resultsRC;
         
 
         INLINEQUALIFIER
@@ -68,28 +69,29 @@ struct AlignerArguments{
             std::string three_n_query;   //3 nucleotide query
           std::string rc_query;
             std::string three_n_rc_query;
+
          std::string ref;//the window of the reference genome
             std::string three_n_ref;
-         std::string rc_ref;
+         std::string rc_ref; //the window of the reference genomeRC
             std::string three_n_rc_ref;
 
         std::string sam_tag;
             int ref_len;
         StripedSmithWaterman::Filter filter;
             std::size_t windowlength;
-            std::size_t windowlengthRC;
+     //       std::size_t windowlengthRC;
             int32_t maskLen;
         MappedRead result;
-        MappedRead resultRC;
+      //  MappedRead resultRC;
             read_number readId;
             std::string readsequence;
         std::string rev;
         std::vector<StripedSmithWaterman::Alignment> alignments;
         std::vector<int> num_conversions;
 
-            AlignerArguments():alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment(),
-                                            StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
-                            num_conversions({0,0,0,0})
+            AlignerArguments():
+                            alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
+                            num_conversions({0,0})
             {
             }
 

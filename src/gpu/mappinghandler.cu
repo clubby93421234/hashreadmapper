@@ -1,4 +1,5 @@
 #include "gpu/mappinghandler.cuh"
+
 #include <hpc_helpers.cuh>
 #include <config.hpp>
 #include <options.hpp>
@@ -33,29 +34,36 @@
 
 #include <gpu/mappedread.cuh>
 
+       /// @brief 
+       /// @param programOptions_ 
+       /// @param genome_ 
+       /// @param genomeRC_ 
+       /// @param results_ 
+       /// @param resultsRC_ 
        Mappinghandler::Mappinghandler(
             const ProgramOptions* programOptions_,
             const Genome* genome_,
             const Genome* genomeRC_,
-             std::vector<MappedRead>* results_,
-             std::vector<MappedRead>* resultsRC_
+             std::vector<MappedRead>* results_
+             //,std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
         genomeRC(genomeRC_),
         genome(genome_),
-        results(results_),
-        resultsRC(resultsRC_)
+        results(results_)
+       // ,      resultsRC(resultsRC_)
         {
            
         }
 
+        /// @brief 
         Mappinghandler::~Mappinghandler(){
             
        }
 
      
 
-      /// @brief Used to slect a mapper and stars it
+      /// @brief Used to select a mapper and starts it
       /// @param cpuReadStorage_ The storage of reads
       void Mappinghandler::go(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage_){
         //mappertype=(int) programOptions.mappType;
@@ -128,6 +136,10 @@
      } 
    
     INLINEQUALIFIER
+    /// @brief converts every 'C' into a 'T' 
+    /// @param output 
+    /// @param input 
+    /// @param length 
     void Mappinghandler::NucleoideConverer(char* output, const char* input, int length){
         if(strlen(input)!=0)
         {
@@ -139,7 +151,7 @@
                 }
             }
         }else
-        assert("shit");
+        assert("Nucleotide Converter Failed");
      }
         
         //Helper struct for CSSW-Mapping
@@ -199,7 +211,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
 
 
-       //a queue to store the results
     
     std::cout<<"lets go bigfor:...\n";
 
@@ -207,7 +218,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
    for(std::size_t r = 0; r < numreads; r++){
     
             const auto& result = (*results)[r];
-            const auto& resultRC = (*resultsRC)[r];
+//            const auto& resultRC = (*resultsRC)[r];
             
             read_number readId = r;
             
@@ -229,39 +240,34 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             );
 
 
-        //   if(result.orientation == AlignmentOrientation::ReverseComplement){
-          //      SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-          //  }
+           if(result.orientation == AlignmentOrientation::ReverseComplement){
+                SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
+            }
+
             auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
-if(resultRC.orientation != AlignmentOrientation::None ){
-    
-    std::cout<<" hello\n";
-}
 
             if(result.orientation != AlignmentOrientation::None ){
                
                 const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                const auto& genomesequenceRC = (*genomeRC).data.at(resultRC.chromosomeId);
+                const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
                 const std::size_t windowlength = result.position + 
                     programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
                     result.position;
-                const std::size_t windowlengthRC = resultRC.position + 
+                const std::size_t windowlengthRC = result.position + 
                     programOptions->windowSize < genomesequenceRC.size() ? programOptions->windowSize : genomesequenceRC.size() - 
-                    resultRC.position;
+                    result.position;
 
+                std::size_t aef=genomesequenceRC.size()-result.position-1;
                 std::string_view window(genomesequence.data() + result.position, windowlength);            
-                std::string_view windowRC(genomesequenceRC.data() + resultRC.position, windowlengthRC);
+                std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
-      //     std::cout<<"aswedf\n";
                 processedResults++;
 
                 int32_t maskLen = readLengths[0]/2;
                 maskLen = maskLen < 15 ? 15 : maskLen;
-
                    
-                    AlignerArguments ali;
-
+                AlignerArguments ali;
                 
                     ali.query=readsequence;
                     ali.three_n_query.resize(readLengths[0]);
@@ -271,33 +277,29 @@ if(resultRC.orientation != AlignmentOrientation::None ){
                     ali.three_n_rc_query.resize(readLengths[0]);  
                     NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]); 
                     
-
                     ali.ref=std::string(window).c_str();
                     ali.three_n_ref.resize(windowlength);
                     NucleoideConverer(ali.three_n_ref.data() ,ali.ref.c_str(), windowlength);
+                    
                     ali.rc_ref=std::string(windowRC).c_str();
-                    //SequenceHelpers::reverseComplementSequenceDecoded(ali.ref.data(), windowlength); 
-
                     ali.three_n_rc_ref.resize(windowlengthRC);
                     NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
 
                     ali.filter=filter;
+                    
                     ali.maskLen=maskLen;
                     ali.readId=readId; 
                     ali.ref_len=windowlength;
                    
                     ali.result=result;
-                    ali.resultRC=resultRC;
+//                    ali.resultRC=resultRC;
                     
-                    //ali.rev=rev;  //böse!!
                     ali.windowlength=windowlength;
-                    ali.windowlengthRC=windowlengthRC;
+            //        ali.windowlengthRC=windowlengthRC;
 
 
                         mappingout.push_back(ali);
                     
-
-//        std::cout << "ach schit \n";
                
                 }else{
                     //no need to do sth. here
@@ -314,11 +316,10 @@ if(resultRC.orientation != AlignmentOrientation::None ){
 
         ThreadPool threadPool(std::max(1, programOptions->threads));
        ThreadPool::ParallelForHandle pforHandle;
-std::cout<<"noch mehr schit\n";
 
-       //function that maps all 4 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF , 3NRC_Query - 3NRC_REF and 3NQuery - 3NRC_REF
+       //function that maps 2 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF 
         auto mapfk=[&](auto begin, auto end, int /*threadid*/){
-           // std::cout<<"i am doing my job!\n";
+          
                 for(auto i=begin; i< end; i++){
 
                     // 3NQuery-3NREF
@@ -343,160 +344,158 @@ std::cout<<"noch mehr schit\n";
                         alii,
                         mappingout.at(i).maskLen);
 
-                        // 3NRC_Query - 3NRC_REF
-                        StripedSmithWaterman::Alignment* aliii;
-                    aliii=&mappingout.at(i).alignments.at(2);
-                    aligner.Align(
-                        mappingout.at(i).three_n_rc_query.c_str(),
-                        mappingout.at(i).three_n_rc_ref.c_str(),
-                        mappingout.at(i).ref_len,
-                        mappingout.at(i).filter,
-                        aliii,
-                        mappingout.at(i).maskLen);
-
-                        // 3NQuery - 3NRC_REF
-                        StripedSmithWaterman::Alignment* aliv;
-                    aliv=&mappingout.at(i).alignments.at(3);
-                    aligner.Align(
-                        mappingout.at(i).three_n_query.c_str(),
-                        mappingout.at(i).three_n_rc_ref.c_str(),
-                        mappingout.at(i).ref_len,
-                        mappingout.at(i).filter,
-                        aliv,
-                        mappingout.at(i).maskLen);
+                   
                 }
         };
         
        
         std::size_t start=0;
-     //   threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
+        threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
        std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
 
-    auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, uint8_t h){
+    auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           int num_mismatches=0;
-            std::string* ref;
-            std::string* query;
-            std::string_view RCref;
-            std::cout<<"allesguthier: "<<h<<"\n";
-                switch (h)
-                {
-                case 0: // 3NQuery-3NREF
-                    ref=&aa.ref;
-                   // std::string_view otherRef(aa.rev.c_str() + aa.result.position, aa.windowlength);
-                    //RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
-                    query=&aa.query;
-                    break;
-                case 1:// 3NRC_Query-3NREF
-                    query=&aa.rc_query;
-                    ref=&aa.ref;
-                   // RCref=aa.rev.substr(aa.result.position, aa.result.position + aa.windowlength);
-                    break;
-                case 2: // 3NRC_Query - 3NRC_REF
-                    query=&aa.rc_query;
-                    ref=&aa.rc_ref;
-                   // RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
-                    break;
-                case 3:  // 3NQuery - 3NRC_REF
-                    query=&aa.query;
-                    ref=&aa.rc_ref;
-                   // RCref=aa.rev.substr(aa.resultRC.position, aa.resultRC.position + aa.windowlength);
-                    break;
+           int num_conversions=0;
+           
+           std::string* _query=&aa.query;
+           std::string* _ref=&aa.ref;
 
-                default:
-                std::cout<<"sth went wrong with recalculating alignment score\n";
-                    break;
-                }
-                std::cout<<"immernoch "<<h<<"\n";
+           if(!h){
+            _query=&aa.rc_query;
+           }  
+
         int refPos = 0, altPos = 0;
+
         for (const auto  & cigarEntry : cig) {
+
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
+
         switch (cigarEntry.first) {
+
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
                 if (
-                    (
-                        ref->at(refPos + i) == query->at(altPos + i) //matching query and ref
-                    &&  query->at(altPos +i) == SequenceHelpers::complementBaseDecoded(RCref.at(altPos +i)) //and matching query with RC ref
-                     )
-                    || ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                    || query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                    _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
                 )
-                    continue; //not interesed
+                   continue; // not interesed
+                if(_query->at(altPos + i)=='T'){//if its a possible conversion
                     
-                //TODO: what if there is a missmatch or conversion? --> ...
-
-
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    }
             }
+
             refPos += basesLeft;
             altPos += basesLeft;
-            break;
+        break;
 
         case Cigar::Op::Insert:
             altPos += basesLeft;
-            break;
+        break;
 
         case Cigar::Op::Delete:
             refPos += basesLeft;
-            break;
+        break;
 
         case Cigar::Op::SoftClip:
             altPos += basesLeft;
-            break;
+        break;
 
         case Cigar::Op::HardClip:
-            break;
+
+        break;
 
         case Cigar::Op::Skipped:
             refPos += basesLeft;
-            break;
+        break;
 
         case Cigar::Op::Padding:
-        //TODO: no idea what to do here
-            break;
+        
+        break;
 
         case Cigar::Op::Mismatch:
-        for (int i = 0; i < basesLeft; ++i) {
-                if (aa.ref[refPos + i] == aa.query[altPos + i] || aa.ref[refPos + i] == WILDCARD_NUCLEOTIDE
-                    || aa.query[altPos + i] == WILDCARD_NUCLEOTIDE)
+            for (int i = 0; i < basesLeft; ++i) {
+                if (
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                ){
                     continue;
-                //TODO
+                }
+                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                    
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    }
+                //TODO find the conversion 
+                
+
             }
             refPos +=basesLeft;
             altPos += basesLeft;
             
-            break;  
+        break;
+
         case Cigar::Op::Equal:
+for (int i = 0; i < basesLeft; ++i) {
+                if (
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                ){
+                    continue;
+                }
+                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                    
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    }
+                //TODO find the conversion 
+                
+
+            }
             refPos += basesLeft;
             altPos += basesLeft;
         break;
 
         default:
-            assert(false && "Unhandled CIGAR operation");
-            break;
+            std::cout<<"this shouldnt print\n";
+        break;
         }
 
         }
-
+        std::cout<<"numcon: "<<num_conversions<<"\n";
      };
 
         auto comparefk=[&](auto begin, auto end, int /*threadid*/){
-            for(auto i=begin; i< end; i++){
-                
+
+            for(auto i=begin; i< end; i++){            
                 Cigar cigi{mappingout.at(i).alignments.at(0).cigar_string};
                 Cigar cigii{mappingout.at(i).alignments.at(1).cigar_string};
-                Cigar cigiii{mappingout.at(i).alignments.at(2).cigar_string};
-                Cigar cigiv{mappingout.at(i).alignments.at(3).cigar_string};
-                
+                        
                 recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
                 recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
-                recalculateAlignmentScorefk(mappingout.at(i), cigiii.getEntries(), 2);
-                recalculateAlignmentScorefk(mappingout.at(i), cigiv.getEntries(), 3);
-           
             }
         };
-   // threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
+
+    threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
  
  
     printtoSAM();
