@@ -257,7 +257,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                 const std::size_t windowlengthRC = result.position + 
                     programOptions->windowSize < genomesequenceRC.size() ? programOptions->windowSize : genomesequenceRC.size() - 
                     result.position;
-                    
+
                 std::size_t aef=genomesequenceRC.size()-result.position-1;
                 std::string_view window(genomesequence.data() + result.position, windowlength);            
                 std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
@@ -357,7 +357,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
            int num_conversions=0;
-           std::size_t lengthref=aa.ref_len;
+           
            std::string* _query=&aa.query;
            std::string* _ref=&aa.ref;
 
@@ -381,7 +381,15 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                     || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
                 )
                    continue; // not interesed
-                
+                if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                    
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    }
             }
 
             refPos += basesLeft;
@@ -422,8 +430,14 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                 ){
                     continue;
                 }
-                    if(_query->at(altPos + i)==SequenceHelpers::complementBaseDecoded(_ref->at(refPos + i))){
-
+                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                    
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
                     }
                 //TODO find the conversion 
                 
@@ -435,7 +449,28 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         break;
 
         case Cigar::Op::Equal:
+for (int i = 0; i < basesLeft; ++i) {
+                if (
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                ){
+                    continue;
+                }
+                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                    
+                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
+                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
+                    ){
+                        num_conversions++;    
+                    }
+                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    }
+                //TODO find the conversion 
+                
 
+            }
             refPos += basesLeft;
             altPos += basesLeft;
         break;
@@ -446,7 +481,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         }
 
         }
-
+        std::cout<<"numcon: "<<num_conversions<<"\n";
      };
 
         auto comparefk=[&](auto begin, auto end, int /*threadid*/){
