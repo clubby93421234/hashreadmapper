@@ -59,6 +59,18 @@ indem sie die Bits in "n" an bestimmten Stellen verschiebt und dann bitweise mit
             }
             return in;
         };
+        
+        HOSTDEVICEQUALIFIER INLINEQUALIFIER
+        static constexpr bool isATorCG(char in) noexcept{
+            
+            switch(in){
+                case 'A': return true;
+                case 'C': return false;
+                case 'G': return false;
+                case 'T': return true;
+            }
+            return true;
+        };
 
         HOSTDEVICEQUALIFIER INLINEQUALIFIER
         static constexpr void reverseComplementSequenceDecoded(char* reverseComplement, const char* sequence, int sequencelength) noexcept{

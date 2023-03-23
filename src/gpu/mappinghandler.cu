@@ -1,4 +1,5 @@
 #include "gpu/mappinghandler.cuh"
+
 #include <hpc_helpers.cuh>
 #include <config.hpp>
 #include <options.hpp>
@@ -43,14 +44,14 @@
             const ProgramOptions* programOptions_,
             const Genome* genome_,
             const Genome* genomeRC_,
-             std::vector<MappedRead>* results_,
-             std::vector<MappedRead>* resultsRC_
+             std::vector<MappedRead>* results_
+             //,std::vector<MappedRead>* resultsRC_
              ):
         programOptions(programOptions_),
         genomeRC(genomeRC_),
         genome(genome_),
-        results(results_),
-        resultsRC(resultsRC_)
+        results(results_)
+       // ,      resultsRC(resultsRC_)
         {
            
         }
@@ -217,7 +218,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
    for(std::size_t r = 0; r < numreads; r++){
     
             const auto& result = (*results)[r];
-            const auto& resultRC = (*resultsRC)[r];
+//            const auto& resultRC = (*resultsRC)[r];
             
             read_number readId = r;
             
@@ -248,17 +249,18 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             if(result.orientation != AlignmentOrientation::None ){
                
                 const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                const auto& genomesequenceRC = (*genomeRC).data.at(resultRC.chromosomeId);
+                const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
                 const std::size_t windowlength = result.position + 
                     programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
                     result.position;
-                const std::size_t windowlengthRC = resultRC.position + 
+                const std::size_t windowlengthRC = result.position + 
                     programOptions->windowSize < genomesequenceRC.size() ? programOptions->windowSize : genomesequenceRC.size() - 
-                    resultRC.position;
-
+                    result.position;
+                    
+                std::size_t aef=genomesequenceRC.size()-result.position-1;
                 std::string_view window(genomesequence.data() + result.position, windowlength);            
-                std::string_view windowRC(genomesequenceRC.data() + resultRC.position, windowlengthRC);
+                std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
                 processedResults++;
 
@@ -284,15 +286,16 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                     NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
 
                     ali.filter=filter;
+                    
                     ali.maskLen=maskLen;
                     ali.readId=readId; 
                     ali.ref_len=windowlength;
                    
                     ali.result=result;
-                    ali.resultRC=resultRC;
+//                    ali.resultRC=resultRC;
                     
                     ali.windowlength=windowlength;
-                    ali.windowlengthRC=windowlengthRC;
+            //        ali.windowlengthRC=windowlengthRC;
 
 
                         mappingout.push_back(ali);
@@ -353,28 +356,32 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           int num_mismatches=0;
-          
-           
-             
+           int num_conversions=0;
+           std::size_t lengthref=aa.ref_len;
+           std::string* _query=&aa.query;
+           std::string* _ref=&aa.ref;
+
+           if(!h){
+            _query=&aa.rc_query;
+           }  
+
         int refPos = 0, altPos = 0;
+
         for (const auto  & cigarEntry : cig) {
+
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
+
         switch (cigarEntry.first) {
+
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
                 if (
-                    (
-                       aa.query.at(altPos + i) == aa.ref.at(refPos + i) //matching query and ref
-                    && aa.query.at(altPos + i) == SequenceHelpers::complementBaseDecoded(aa.rc_ref.at(altPos +i)) //and matching query with RC ref
-                     )
-                    || aa.ref.at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                    || aa.query.at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                ){
-                    continue; // not interesed
-                }else{
-                    // what if there is a missmatch or conversion? --> ...
-                }
+                    _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                )
+                   continue; // not interesed
+                
             }
 
             refPos += basesLeft;
@@ -407,11 +414,20 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 
         case Cigar::Op::Mismatch:
             for (int i = 0; i < basesLeft; ++i) {
-                if (aa.ref[refPos + i] == aa.query[altPos + i] 
-                    || aa.ref[refPos + i] == WILDCARD_NUCLEOTIDE
-                    || aa.query[altPos + i] == WILDCARD_NUCLEOTIDE)
+                if (
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
+                ){
                     continue;
-                //TODO
+                }
+                    if(_query->at(altPos + i)==SequenceHelpers::complementBaseDecoded(_ref->at(refPos + i))){
+
+                    }
+                //TODO find the conversion 
+                
+
             }
             refPos +=basesLeft;
             altPos += basesLeft;
@@ -419,12 +435,13 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         break;
 
         case Cigar::Op::Equal:
+
             refPos += basesLeft;
             altPos += basesLeft;
         break;
 
         default:
-            assert(false);//undefined CIGAR expression detected
+            std::cout<<"this shouldnt print\n";
         break;
         }
 
