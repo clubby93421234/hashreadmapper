@@ -356,8 +356,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
 //TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           int num_conversions=0;
-           
+           int _num_conversions=0;
            std::string* _query=&aa.query;
            std::string* _ref=&aa.ref;
 
@@ -376,20 +375,41 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
                 if (
-                    _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
                     || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
                     || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                )
-                   continue; // not interesed
-                if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                ){
+                    continue;
+                }
+                    if(_query->at(altPos + i)=='C'){//if its a mismatch 
+                    
+                    if(     ('T'==_ref->at(refPos + i) && 'A'== aa.rc_ref.at(refPos + i))
+                         || ('A'==_ref->at(refPos + i) && 'T'== aa.rc_ref.at(refPos + i))
+                    ){
+                       
+                        ali->sw_score-=aligner.getScore('T',_ref->at(refPos + i));//substract false matching score
+                    ali->sw_score+=aligner.getScore('C',_ref->at(refPos + i));//add corrected matching score
+                            
+                    }
+                    
+                    }
+                    if(_query->at(altPos + i)=='T'){//if its a conversion 
                     
                     if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
                          || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
                     ){
-                        num_conversions++;    
+                        _num_conversions++;
+
+                        ali->sw_score-=aligner.getScore('T','T');//substract false matching score
+                    ali->sw_score+=aligner.getScore('T',_ref->at(refPos + i));//add corrected matching score
+                            
                     }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    
                     }
+           
+                
+
             }
 
             refPos += basesLeft;
@@ -430,18 +450,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                 ){
                     continue;
                 }
-                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
                     
-                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
-                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
-                    ){
-                        num_conversions++;    
-                    }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
-                    }
-                //TODO find the conversion 
-                
-
             }
             refPos +=basesLeft;
             altPos += basesLeft;
@@ -449,7 +458,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         break;
 
         case Cigar::Op::Equal:
-for (int i = 0; i < basesLeft; ++i) {
+            for (int i = 0; i < basesLeft; ++i) {
                 if (
                     
                        _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
@@ -463,11 +472,16 @@ for (int i = 0; i < basesLeft; ++i) {
                     if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
                          || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
                     ){
-                        num_conversions++;    
+                        _num_conversions++;
+
+                        ali->sw_score-=2;
+                    ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+
+       //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
                     }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    
                     }
-                //TODO find the conversion 
+           
                 
 
             }
@@ -481,7 +495,8 @@ for (int i = 0; i < basesLeft; ++i) {
         }
 
         }
-        std::cout<<"numcon: "<<num_conversions<<"\n";
+       
+       aa.num_conversions.at(h)=_num_conversions;//update AlignerArguments
      };
 
         auto comparefk=[&](auto begin, auto end, int /*threadid*/){
@@ -492,6 +507,7 @@ for (int i = 0; i < basesLeft; ++i) {
                         
                 recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
                 recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+                
             }
         };
 

@@ -75,7 +75,7 @@ struct AlignerArguments{
          std::string rc_ref; //the window of the reference genomeRC
             std::string three_n_rc_ref;
 
-        std::string sam_tag;
+        
             int ref_len;
         StripedSmithWaterman::Filter filter;
             std::size_t windowlength;
@@ -88,10 +88,11 @@ struct AlignerArguments{
         std::string rev;
         std::vector<StripedSmithWaterman::Alignment> alignments;
         std::vector<int> num_conversions;
-
+        std::vector<std::string> sam_tags;
             AlignerArguments():
                             alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
-                            num_conversions({0,0})
+                            num_conversions({0,0}),
+                            sam_tags({"",""})
             {
             }
 
