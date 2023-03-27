@@ -162,47 +162,78 @@
 /// @brief simple print methode for the vector mappingout into the "CSSW_SAM.SAM" file. Used for CSSW-Mapping
 void Mappinghandler::printtoSAM(){
     //TODO #3 updated saving to SAM file and setting the sam tag
-    /*
+    
     std::ofstream outputstream("CSSW_SAM.SAM");
 
     outputstream << "@HD\n"<<
-                    "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\n";
+                    "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
       
     for(std::size_t i =0;i<mappingout.size();i++){
 
+        std::string samtag="";
+        uint32_t mapq=0;
+        int pos=0;
+        std::string cig="";
+        auto mapqfkt=[&](int i,int j){
+            uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score - 
+                mappingout.at(i).alignments.at(j).sw_score_next_best)
+                /(double)mappingout.at(i).alignments.at(j).sw_score);
+			_mapq = (uint32_t) (_mapq + 4.99);
+			_mapq = _mapq < 254 ? _mapq : 254;
+            return _mapq;
+        };
 
-        //TODO MAPQ mussüberarbeitet werden!!! Das ist so nicht richtig
+        if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
+
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(mappingout.at(i).num_conversions.at(0)));
+            samtag.append(">");
+            samtag.append("YZ:A:<+>");//REF-3N
+
+            mapq=mapqfkt(i,0);
+            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin;
+            cig.append( mappingout.at(i).alignments.at(0).cigar_string );
+
+        }else{
+
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(mappingout.at(i).num_conversions.at(1)));
+            samtag.append(">");
+            samtag.append("YZ:A:<->");//REF-RC-3N
+
+            mapq=mapqfkt(i,1);
+            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
+            cig.append(mappingout.at(i).alignments.at(1).cigar_string );
+        }
+        
         //MAPQ calculated as in CSSW 
         //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
          //Line 167 to  169
-        uint32_t mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignment.sw_score - 
-                mappingout.at(i).alignment.sw_score_next_best)
-                /(double)mappingout.at(i).alignment.sw_score);
-			mapq = (uint32_t) (mapq + 4.99);
-			mapq = mapq < 254 ? mapq : 254;
-
+        
+        
         outputstream << mappingout.at(i).readId<<"\t"                       //QNAME
         << "*" <<"\t"                                                       // FLAG
         << genome->names.at(mappingout.at(i).result.chromosomeId) <<"\t"    // RNAME
-        << mappingout.at(i).result.position + mappingout.at(i).alignment.query_begin <<"\t"                   // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+        << pos <<"\t" // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
         << mapq <<"\t"                                                      // MAPQ
-        << mappingout.at(i).alignment.cigar_string <<"\t"                   // CIGAR
+        <<cig<<"\t"                   // CIGAR
         << "=" <<"\t"                                                // RNEXT
         << "" <<"\t"                                                // PNEXT
         << "0" <<"\t"                                               // TLEN
         << mappingout.at(i).query <<"\t"                               // SEQ
         << "*" <<"\t"                                                // QUAL
+        <<samtag <<"\t"                                             //TAG
         <<"\n";
     } 
     outputstream.close();
-    */
+    
 }
 
      //Complete-Striped-Smith-Waterman Mapper.
      //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 
-        StripedSmithWaterman::Aligner aligner;
+       StripedSmithWaterman::Aligner aligner;
         StripedSmithWaterman::Filter filter;
      
         const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
@@ -210,8 +241,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
 
-
-    
     std::cout<<"lets go bigfor:...\n";
 
     std::size_t processedResults = 0;
@@ -307,9 +336,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             
          
         }//end of big for loop
-
-     
-//TODO #8 MACH MAPPING CORRECT
     
    
        std::cout<<"big for done, now to mapping:...\n";
@@ -354,7 +380,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
        std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
-//TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
+
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
            int _num_conversions=0;
            std::string* _query=&aa.query;
@@ -371,7 +397,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
 
         switch (cigarEntry.first) {
-
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
                 if (

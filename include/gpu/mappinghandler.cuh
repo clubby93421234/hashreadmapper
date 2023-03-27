@@ -88,11 +88,10 @@ struct AlignerArguments{
         std::string rev;
         std::vector<StripedSmithWaterman::Alignment> alignments;
         std::vector<int> num_conversions;
-        std::vector<std::string> sam_tags;
+        
             AlignerArguments():
                             alignments({StripedSmithWaterman::Alignment(),StripedSmithWaterman::Alignment()}),
-                            num_conversions({0,0}),
-                            sam_tags({"",""})
+                            num_conversions({0,0})
             {
             }
 
