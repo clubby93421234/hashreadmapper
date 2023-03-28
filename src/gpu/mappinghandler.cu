@@ -89,7 +89,7 @@
        
        /// @brief TODO
     void Mappinghandler::doVC(){
-      /*  
+        
         auto test=(programOptions->outputfile)+".VCF";
         VariantHandler vhandler(test);
         vhandler.VCFFileHeader();
@@ -99,26 +99,20 @@
       
         for (long unsigned int i=0; i<mappingout.size();i++){
          
-         //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
-         //Line 167 to  169
-            mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignment.sw_score - 
-                mappingout.at(i).alignment.sw_score_next_best)
-                /(double)mappingout.at(i).alignment.sw_score);
-			mapq = (uint32_t) (mapq + 4.99);
-			mapq = mapq < 254 ? mapq : 254;
+            if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
+                
+                mapq=mapqfkt(i,0);
+                 
+                if(mapq < MAP_QUALITY_THRESHOLD){
+                    continue;
+                }
 
-            
-           if(mapq < MAP_QUALITY_THRESHOLD){
-                continue;
-            }
-            
-
-            Cigar marlboro{mappingout.at(i).alignment.cigar_string};
+            Cigar marlboro{mappingout.at(i).alignments.at(0).cigar_string};
           
-            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignment.query_begin);
+            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(0).query_begin);
             
            vhandler.call(
-            mappingout.at(i).result.position + mappingout.at(i).alignment.query_begin, //seq position
+            mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, //seq position
             prefix,
             mappingout.at(i).ref,
             mappingout.at(i).query, 
@@ -127,12 +121,31 @@
             mappingout.at(i).readId,
             mapq
             );
-            
-        }
-        
-        //vhandler.forceFlush();
-        */
 
+            }else{
+
+                mapq=mapqfkt(i,1);
+                
+                if(mapq < MAP_QUALITY_THRESHOLD){
+                    continue;
+                }
+                Cigar marlboro{mappingout.at(i).alignments.at(1).cigar_string};
+          
+            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(1).query_begin);
+            
+           vhandler.call(
+            mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, //seq position
+            prefix,
+            mappingout.at(i).ref,
+            mappingout.at(i).query, 
+            marlboro.getEntries(),
+            genome->names.at(mappingout.at(i).result.chromosomeId),
+            mappingout.at(i).readId,
+            mapq
+            );
+            }  
+        }        
+        //vhandler.forceFlush();
      } 
    
     INLINEQUALIFIER
@@ -154,14 +167,24 @@
         assert("Nucleotide Converter Failed");
      }
         
-        //Helper struct for CSSW-Mapping
+ uint32_t Mappinghandler::mapqfkt(int i, int j){
+     //MAPQ calculated as in CSSW 
+        //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
+         //Line 167 to  169
+     uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score - 
+                mappingout.at(i).alignments.at(j).sw_score_next_best)
+                /(double)mappingout.at(i).alignments.at(j).sw_score);
+			_mapq = (uint32_t) (_mapq + 4.99);
+			_mapq = _mapq < 254 ? _mapq : 254;
+            return _mapq;
+ }
 
 
 
 
 /// @brief simple print methode for the vector mappingout into the "CSSW_SAM.SAM" file. Used for CSSW-Mapping
 void Mappinghandler::printtoSAM(){
-    //TODO #3 updated saving to SAM file and setting the sam tag
+    
     
     std::ofstream outputstream("CSSW_SAM.SAM");
 
@@ -174,17 +197,12 @@ void Mappinghandler::printtoSAM(){
         uint32_t mapq=0;
         int pos=0;
         std::string cig="";
-        auto mapqfkt=[&](int i,int j){
-            uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score - 
-                mappingout.at(i).alignments.at(j).sw_score_next_best)
-                /(double)mappingout.at(i).alignments.at(j).sw_score);
-			_mapq = (uint32_t) (_mapq + 4.99);
-			_mapq = _mapq < 254 ? _mapq : 254;
-            return _mapq;
-        };
+
+       
 
         if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
-
+            //if(mappingout.at(i).alignments.at(0).sw_score>5)
+            //std::cout<<"1: "<<mappingout.at(i).alignments.at(0).sw_score<<" "<<i<<"\n";
             samtag.append("Yf:i:<");
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(0)));
             samtag.append(">");
@@ -195,7 +213,8 @@ void Mappinghandler::printtoSAM(){
             cig.append( mappingout.at(i).alignments.at(0).cigar_string );
 
         }else{
-
+            //if(mappingout.at(i).alignments.at(1).sw_score>5)
+            //std::cout<<"2: "<<mappingout.at(i).alignments.at(1).sw_score<<" "<<i<<"\n";
             samtag.append("Yf:i:<");
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(1)));
             samtag.append(">");
@@ -205,11 +224,6 @@ void Mappinghandler::printtoSAM(){
             pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
             cig.append(mappingout.at(i).alignments.at(1).cigar_string );
         }
-        
-        //MAPQ calculated as in CSSW 
-        //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
-         //Line 167 to  169
-        
         
         outputstream << mappingout.at(i).readId<<"\t"                       //QNAME
         << "*" <<"\t"                                                       // FLAG

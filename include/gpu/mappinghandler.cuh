@@ -100,7 +100,7 @@ struct AlignerArguments{
         void printtoSAM();
         void CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
         void examplewrapper(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
-
+        uint32_t mapqfkt(int i, int j);
         std::vector<AlignerArguments> mappingout;
 };
 
