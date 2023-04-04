@@ -89,7 +89,7 @@
        
        /// @brief TODO
     void Mappinghandler::doVC(){
-      /*  
+        
         auto test=(programOptions->outputfile)+".VCF";
         VariantHandler vhandler(test);
         vhandler.VCFFileHeader();
@@ -99,26 +99,20 @@
       
         for (long unsigned int i=0; i<mappingout.size();i++){
          
-         //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
-         //Line 167 to  169
-            mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignment.sw_score - 
-                mappingout.at(i).alignment.sw_score_next_best)
-                /(double)mappingout.at(i).alignment.sw_score);
-			mapq = (uint32_t) (mapq + 4.99);
-			mapq = mapq < 254 ? mapq : 254;
+            if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
+                
+                mapq=mapqfkt(i,0);
+                 
+                if(mapq < MAP_QUALITY_THRESHOLD){
+                    continue;
+                }
 
-            
-           if(mapq < MAP_QUALITY_THRESHOLD){
-                continue;
-            }
-            
-
-            Cigar marlboro{mappingout.at(i).alignment.cigar_string};
+            Cigar marlboro{mappingout.at(i).alignments.at(0).cigar_string};
           
-            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignment.query_begin);
+            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(0).query_begin);
             
            vhandler.call(
-            mappingout.at(i).result.position + mappingout.at(i).alignment.query_begin, //seq position
+            mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, //seq position
             prefix,
             mappingout.at(i).ref,
             mappingout.at(i).query, 
@@ -127,12 +121,31 @@
             mappingout.at(i).readId,
             mapq
             );
-            
-        }
-        
-        //vhandler.forceFlush();
-        */
 
+            }else{
+
+                mapq=mapqfkt(i,1);
+                
+                if(mapq < MAP_QUALITY_THRESHOLD){
+                    continue;
+                }
+                Cigar marlboro{mappingout.at(i).alignments.at(1).cigar_string};
+          
+            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(1).query_begin);
+            
+           vhandler.call(
+            mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, //seq position
+            prefix,
+            mappingout.at(i).ref,
+            mappingout.at(i).query, 
+            marlboro.getEntries(),
+            genome->names.at(mappingout.at(i).result.chromosomeId),
+            mappingout.at(i).readId,
+            mapq
+            );
+            }  
+        }        
+        //vhandler.forceFlush();
      } 
    
     INLINEQUALIFIER
@@ -154,55 +167,87 @@
         assert("Nucleotide Converter Failed");
      }
         
-        //Helper struct for CSSW-Mapping
+ uint32_t Mappinghandler::mapqfkt(int i, int j){
+     //MAPQ calculated as in CSSW 
+        //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
+         //Line 167 to  169
+     uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score - 
+                mappingout.at(i).alignments.at(j).sw_score_next_best)
+                /(double)mappingout.at(i).alignments.at(j).sw_score);
+			_mapq = (uint32_t) (_mapq + 4.99);
+			_mapq = _mapq < 254 ? _mapq : 254;
+            return _mapq;
+ }
 
 
 
 
 /// @brief simple print methode for the vector mappingout into the "CSSW_SAM.SAM" file. Used for CSSW-Mapping
 void Mappinghandler::printtoSAM(){
-    //TODO #3 updated saving to SAM file and setting the sam tag
-    /*
+    
+    
     std::ofstream outputstream("CSSW_SAM.SAM");
 
     outputstream << "@HD\n"<<
-                    "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\n";
+                    "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
       
     for(std::size_t i =0;i<mappingout.size();i++){
 
+        std::string samtag="";
+        uint32_t mapq=0;
+        int pos=0;
+        std::string cig="";
 
-        //TODO MAPQ mussüberarbeitet werden!!! Das ist so nicht richtig
-        //MAPQ calculated as in CSSW 
-        //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
-         //Line 167 to  169
-        uint32_t mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignment.sw_score - 
-                mappingout.at(i).alignment.sw_score_next_best)
-                /(double)mappingout.at(i).alignment.sw_score);
-			mapq = (uint32_t) (mapq + 4.99);
-			mapq = mapq < 254 ? mapq : 254;
+       
 
+        if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
+            //if(mappingout.at(i).alignments.at(0).sw_score>5)
+            //std::cout<<"1: "<<mappingout.at(i).alignments.at(0).sw_score<<" "<<i<<"\n";
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(mappingout.at(i).num_conversions.at(0)));
+            samtag.append(">");
+            samtag.append("YZ:A:<+>");//REF-3N
+
+            mapq=mapqfkt(i,0);
+            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin;
+            cig.append( mappingout.at(i).alignments.at(0).cigar_string );
+
+        }else{
+            //if(mappingout.at(i).alignments.at(1).sw_score>5)
+            //std::cout<<"2: "<<mappingout.at(i).alignments.at(1).sw_score<<" "<<i<<"\n";
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(mappingout.at(i).num_conversions.at(1)));
+            samtag.append(">");
+            samtag.append("YZ:A:<->");//REF-RC-3N
+
+            mapq=mapqfkt(i,1);
+            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
+            cig.append(mappingout.at(i).alignments.at(1).cigar_string );
+        }
+        
         outputstream << mappingout.at(i).readId<<"\t"                       //QNAME
         << "*" <<"\t"                                                       // FLAG
         << genome->names.at(mappingout.at(i).result.chromosomeId) <<"\t"    // RNAME
-        << mappingout.at(i).result.position + mappingout.at(i).alignment.query_begin <<"\t"                   // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+        << pos <<"\t" // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
         << mapq <<"\t"                                                      // MAPQ
-        << mappingout.at(i).alignment.cigar_string <<"\t"                   // CIGAR
+        <<cig<<"\t"                   // CIGAR
         << "=" <<"\t"                                                // RNEXT
         << "" <<"\t"                                                // PNEXT
         << "0" <<"\t"                                               // TLEN
         << mappingout.at(i).query <<"\t"                               // SEQ
         << "*" <<"\t"                                                // QUAL
+        <<samtag <<"\t"                                             //TAG
         <<"\n";
     } 
     outputstream.close();
-    */
+    
 }
 
      //Complete-Striped-Smith-Waterman Mapper.
      //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
 void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 
-        StripedSmithWaterman::Aligner aligner;
+       StripedSmithWaterman::Aligner aligner;
         StripedSmithWaterman::Filter filter;
      
         const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
@@ -210,8 +255,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
 
         std::size_t numreads=cpuReadStorage->getNumberOfReads();
 
-
-    
     std::cout<<"lets go bigfor:...\n";
 
     std::size_t processedResults = 0;
@@ -307,9 +350,6 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             
          
         }//end of big for loop
-
-     
-//TODO #8 MACH MAPPING CORRECT
     
    
        std::cout<<"big for done, now to mapping:...\n";
@@ -354,10 +394,9 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
        std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
 
     auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
-//TODO #2  lambda recalculateAlignmentScorefk is unfinished: number of conversions is not saved
+
             StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           int num_conversions=0;
-           
+           int _num_conversions=0;
            std::string* _query=&aa.query;
            std::string* _ref=&aa.ref;
 
@@ -372,24 +411,44 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
 
         switch (cigarEntry.first) {
-
         case Cigar::Op::Match:
             for (int i = 0; i < basesLeft; ++i) {
                 if (
-                    _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
+                    
+                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
                     || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
                     || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                )
-                   continue; // not interesed
-                if(_query->at(altPos + i)=='T'){//if its a possible conversion
+                ){
+                    continue;
+                }
+                    if(_query->at(altPos + i)=='C'){//if its a mismatch 
+                    
+                    if(     ('T'==_ref->at(refPos + i) && 'A'== aa.rc_ref.at(refPos + i))
+                         || ('A'==_ref->at(refPos + i) && 'T'== aa.rc_ref.at(refPos + i))
+                    ){
+                       
+                        ali->sw_score-=aligner.getScore('T',_ref->at(refPos + i));//substract false matching score
+                    ali->sw_score+=aligner.getScore('C',_ref->at(refPos + i));//add corrected matching score
+                            
+                    }
+                    
+                    }
+                    if(_query->at(altPos + i)=='T'){//if its a conversion 
                     
                     if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
                          || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
                     ){
-                        num_conversions++;    
+                        _num_conversions++;
+
+                        ali->sw_score-=aligner.getScore('T','T');//substract false matching score
+                    ali->sw_score+=aligner.getScore('T',_ref->at(refPos + i));//add corrected matching score
+                            
                     }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    
                     }
+           
+                
+
             }
 
             refPos += basesLeft;
@@ -430,18 +489,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
                 ){
                     continue;
                 }
-                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
                     
-                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
-                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
-                    ){
-                        num_conversions++;    
-                    }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
-                    }
-                //TODO find the conversion 
-                
-
             }
             refPos +=basesLeft;
             altPos += basesLeft;
@@ -449,7 +497,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
         break;
 
         case Cigar::Op::Equal:
-for (int i = 0; i < basesLeft; ++i) {
+            for (int i = 0; i < basesLeft; ++i) {
                 if (
                     
                        _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
@@ -463,11 +511,16 @@ for (int i = 0; i < basesLeft; ++i) {
                     if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
                          || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
                     ){
-                        num_conversions++;    
+                        _num_conversions++;
+
+                        ali->sw_score-=2;
+                    ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+
+       //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
                     }
-                    ali->sw_score-=2;ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
+                    
                     }
-                //TODO find the conversion 
+           
                 
 
             }
@@ -481,7 +534,8 @@ for (int i = 0; i < basesLeft; ++i) {
         }
 
         }
-        std::cout<<"numcon: "<<num_conversions<<"\n";
+       
+       aa.num_conversions.at(h)=_num_conversions;//update AlignerArguments
      };
 
         auto comparefk=[&](auto begin, auto end, int /*threadid*/){
@@ -492,6 +546,7 @@ for (int i = 0; i < basesLeft; ++i) {
                         
                 recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
                 recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+                
             }
         };
 

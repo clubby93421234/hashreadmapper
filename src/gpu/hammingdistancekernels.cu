@@ -37,7 +37,7 @@ void shiftBitArrayLeftBy(unsigned int* array, int size, int shiftamount, IndexTr
     }
 
     array[indextrafo(size - completeInts - 1)] <<= shiftamount;
-    std::cout<<"hello"<<std::endl;
+    
 }
 
 HD_WARNING_DISABLE
