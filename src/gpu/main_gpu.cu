@@ -1006,8 +1006,9 @@ void performMappingGpu(const ProgramOptions& programOptions){
     printDataStructureMemoryUsage(*gpuMinhasher, "hash tables");
 
     step1Timer.print();
-
+    //TODO create repeat index here...
     
+    //... .
     std::cout << "Loading genome\n";
     helpers::CpuTimer genometimer("genometimer");
     Genome genome(programOptions.genomefile);
