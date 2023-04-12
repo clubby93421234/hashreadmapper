@@ -152,6 +152,23 @@ struct SimilarReadIdsDevice{
 };
 
 //query hashtables
+/*This is a function called findReadIdsOfSimilarSequences which takes several inputs and returns an object of type SimilarReadIdsDevice.
+
+The inputs to the function are:
+
+    gpuMinhasher: a pointer to a gpu::GpuMinhasher object
+    minhashHandle: a handle to a Minhasher object
+    d_encodedSequences: a pointer to the encoded sequences in device memory
+    encodedSequencePitchInInts: the pitch (in number of ints) of the encoded sequence array
+    d_sequenceLengths: a pointer to an array of sequence lengths in device memory
+    numSequences: the number of sequences
+    programOptions: an object of type ProgramOptions
+    stream: a CUDA stream to use for the kernel launches
+    mr: a memory resource to use for device allocations (default is rmm::mr::get_current_device_resource())
+
+The function computes the number of similar sequences for each input sequence and stores the result in an object of type SimilarReadIdsDevice. The SimilarReadIdsDevice object contains several member variables, including d_numReadIdsPerSequence, which stores the number of similar sequences for each input sequence, and d_readIds, which stores the IDs of the similar sequences.
+
+The function first calls the determineNumValues function of the gpuMinhasher object to compute the number of similar sequences for each input sequence. It then allocates device memory for d_readIds and checks if the total number of similar sequences is 0. If the total number of similar sequences is 0, it sets the d_numReadIdsPerSequence and d_numReadIdsPerSequencePrefixSum arrays to 0. Otherwise, it calls the retrieveValues function of the gpuMinhasher object to retrieve the IDs of the similar sequences. It then uses the cub::DoubleBuffer class to perform prefix sum operations to compute the prefix sum of the number of similar sequences per input sequence. Finally, it copies the total number of similar sequences to the host and returns the SimilarReadIdsDevice object.*/
 SimilarReadIdsDevice findReadIdsOfSimilarSequences(
     const gpu::GpuMinhasher* gpuMinhasher,
     MinhasherHandle& minhashHandle,
@@ -465,6 +482,7 @@ struct WindowBatchProcessor{
 
         //Next step: transfer windows to gpu
         nvtx::push_range("transfer windows to gpu", 0);
+
         rmm::device_uvector<int> d_windowLengths(batch.numWindows, stream, mr);
         CUDACHECK(cudaMemcpyAsync(
             d_windowLengths.data(),
@@ -485,24 +503,6 @@ struct WindowBatchProcessor{
             );
       
         }
-      
-                
-        //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
-        // do Nucleotide conversion here
-     //TODO #5 perfomence hier ist kaka
- 
-//#pragma omp parallel for
-   
-   /* for(std::size_t i=0; i < h_windowsDecoded.size(); ++i){  
-                if(h_windowsDecoded.at(i)=='C'){
-                    h_windowsDecoded.at(i)='T';
-                }
-            
-    }*/ 
- //   helpers::CpuTimer arschlochgottlelag("bullschit");
-
-      //  SequenceHelpers::NucleotideConverterVectorInplace_CtoT(&h_windowsDecoded, h_windowsDecoded.size());
-        //---------------------------!!!!!!!!!!!!!!!!!!!!!!!!!!!!--------------------------------------
 
         CUDACHECK(cudaMemcpyAsync(
             d_windowsDecoded.data(),
@@ -854,9 +854,6 @@ struct WindowBatchProcessor{
     }
 
 };
-
-/*This handler selects and starts the chosen mapping algorithm
-*/
 
 
 void performMappingGpu(const ProgramOptions& programOptions){
