@@ -1,0 +1,23 @@
+./main-gpu --genomefile /media/chrispassword/SSD_new/masterarbei_zeug/GRCh38_latest_genomic.fna -i /media/chrispassword/SSD_new/masterarbei_zeug/ERR194147_1.fastaq /media/chrispassword/HDD_games/ERR194147/ERR194147_2.fastaq -g 0 -t 12
+
+./main-gpu --genomefile GRCh38.fa -i reads.fasta -g 0 -t 12
+
+
+/media/chrispassword/SSD_new/masterarbei_zeug
+
+
+watch nvidia-smi
+
+
+#den shit braucht man auch
+sudo apt install zlib1g-dev
+
+
+
+https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__TYPES.html#group__CUDART__TYPES_1g3f51e3575c2178246db0a94a430e0038
+
+wget https://www.ncbi.nlm.nih.gov/projects/r_gencoll/ftp_service/nph-gc-ftp-service.cgi/?HistoryId=MCID_6284b4c42c0ea359703e4478&QueryKey=1&ReleaseType=GenBank&FileType=GENOME_FASTA&Flat=true
+
+
+
+./main-gpu -t 12 -g 0 --load-preprocessedreads-from ppreads --genomefile GRCh38.fa --mappertype psw
