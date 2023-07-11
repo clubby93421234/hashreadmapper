@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
-#include <sstream> 
+#include <sstream>
 #include <mutex>
 #include <thread>
 #include <memory>
@@ -26,7 +26,7 @@
 #include <future>
 
 // Complete-Striped-Smith-Waterman-Library
-#include<ssw_cpp.h>
+#include <ssw_cpp.h>
 // BAM Variant Caller and Genomic Analysis
 #include "cigar.hpp"
 #include "constants.hpp"
@@ -34,589 +34,594 @@
 
 #include <gpu/mappedread.cuh>
 
-       /// @brief 
-       /// @param programOptions_ 
-       /// @param genome_ 
-       /// @param genomeRC_ 
-       /// @param results_ 
-       /// @param resultsRC_ 
-       Mappinghandler::Mappinghandler(
-            const ProgramOptions* programOptions_,
-            const Genome* genome_,
-            const Genome* genomeRC_,
-             std::vector<MappedRead>* results_
-             //,std::vector<MappedRead>* resultsRC_
-             ):
-        programOptions(programOptions_),
+/// @brief
+/// @param programOptions_
+/// @param genome_
+/// @param genomeRC_
+/// @param results_
+/// @param resultsRC_
+Mappinghandler::Mappinghandler(
+    const ProgramOptions *programOptions_,
+    const Genome *genome_,
+    const Genome *genomeRC_,
+    std::vector<MappedRead> *results_
+    //,std::vector<MappedRead>* resultsRC_
+    ) : programOptions(programOptions_),
         genomeRC(genomeRC_),
         genome(genome_),
         results(results_)
-       // ,      resultsRC(resultsRC_)
+// ,      resultsRC(resultsRC_)
+{
+}
+
+/// @brief
+Mappinghandler::~Mappinghandler()
+{
+}
+
+/// @brief Used to select a mapper and starts it
+/// @param cpuReadStorage_ The storage of reads
+void Mappinghandler::go(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage_)
+{
+    // mappertype=(int) programOptions.mappType;
+
+    switch (programOptions->mappType)
+    {
+    case MapperType::primitiveSW:
+        std::cout << "primitive SW selected but should not be used!\n";
+        // primitiveSW(cpuReadStorage_);
+        break;
+    case MapperType::SW:
+        // std::cout<<"SW selected \n";
+        CSSW(cpuReadStorage_);
+        break;
+    case MapperType::sthelse:
+        std::cout << "please implement your personal mapper\n";
+        break;
+    default:
+        std::cout << "something went wrong while selecting mappertype\n";
+        examplewrapper(cpuReadStorage_);
+        break;
+    }
+}
+
+/// @brief TODO
+void Mappinghandler::doVC()
+{
+
+    auto test = (programOptions->outputfile) + ".VCF";
+    VariantHandler vhandler(test);
+    vhandler.VCFFileHeader();
+
+    uint32_t mapq = 0;
+
+    for (long unsigned int i = 0; i < mappingout.size(); i++)
+    {
+
+        if (mappingout.at(i).alignments.at(0).sw_score >= mappingout.at(i).alignments.at(1).sw_score)
         {
-           
-        }
 
-        /// @brief 
-        Mappinghandler::~Mappinghandler(){
-            
-       }
+            mapq = mapqfkt(i, 0);
 
-     
-
-      /// @brief Used to select a mapper and starts it
-      /// @param cpuReadStorage_ The storage of reads
-      void Mappinghandler::go(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage_){
-        //mappertype=(int) programOptions.mappType;
-         
-            switch(programOptions->mappType){
-                case MapperType::primitiveSW : 
-                    std::cout<<"primitive SW selected but should not be used!\n"; 
-                    //primitiveSW(cpuReadStorage_);
-                    break;
-                case MapperType::SW : 
-                    //std::cout<<"SW selected \n"; 
-                    CSSW(cpuReadStorage_);
-                break;
-                case MapperType::sthelse : 
-                    std::cout<<"please implement your personal mapper\n"; 
-                break;
-                default: 
-                    std::cout<<"something went wrong while selecting mappertype\n"; 
-                    examplewrapper(cpuReadStorage_);
-                break;
+            if (mapq < MAP_QUALITY_THRESHOLD)
+            {
+                continue;
             }
-       }
-       
-       /// @brief TODO
-    void Mappinghandler::doVC(){
-        
-        auto test=(programOptions->outputfile)+".VCF";
-        VariantHandler vhandler(test);
-        vhandler.VCFFileHeader();
-        
-
-        uint32_t mapq=0;
-      
-        for (long unsigned int i=0; i<mappingout.size();i++){
-         
-            if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
-                
-                mapq=mapqfkt(i,0);
-                 
-                if(mapq < MAP_QUALITY_THRESHOLD){
-                    continue;
-                }
 
             Cigar marlboro{mappingout.at(i).alignments.at(0).cigar_string};
-          
-            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(0).query_begin);
-            
-           vhandler.call(
-            mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, //seq position
-            prefix,
-            mappingout.at(i).ref,
-            mappingout.at(i).query, 
-            marlboro.getEntries(),
-            genome->names.at(mappingout.at(i).result.chromosomeId),
-            mappingout.at(i).readId,
-            mapq
-            );
 
-            }else{
+            std::string prefix = mappingout.at(i).ref.substr(0, mappingout.at(i).alignments.at(0).query_begin);
 
-                mapq=mapqfkt(i,1);
-                
-                if(mapq < MAP_QUALITY_THRESHOLD){
-                    continue;
-                }
-                Cigar marlboro{mappingout.at(i).alignments.at(1).cigar_string};
-          
-            std::string prefix=mappingout.at(i).ref.substr(0,mappingout.at(i).alignments.at(1).query_begin);
-            
-           vhandler.call(
-            mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, //seq position
-            prefix,
-            mappingout.at(i).ref,
-            mappingout.at(i).query, 
-            marlboro.getEntries(),
-            genome->names.at(mappingout.at(i).result.chromosomeId),
-            mappingout.at(i).readId,
-            mapq
-            );
-            }  
-        }        
-        //vhandler.forceFlush();
-     } 
-   
-    INLINEQUALIFIER
-    /// @brief converts every 'C' into a 'T' 
-    /// @param output 
-    /// @param input 
-    /// @param length 
-    void Mappinghandler::NucleoideConverer(char* output, const char* input, int length){
-        if(strlen(input)!=0)
+            vhandler.call(
+                mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, // seq position
+                prefix,
+                mappingout.at(i).ref,
+                mappingout.at(i).query,
+                marlboro.getEntries(),
+                genome->names.at(mappingout.at(i).result.chromosomeId),
+                mappingout.at(i).readId,
+                mapq);
+        }
+        else
         {
 
-                    for(int i = 0; i < length; ++i){
-                switch(input[i]){
-                    case 'C': output[i] = 'T'; break;
-                    default : break;
-                }
+            mapq = mapqfkt(i, 1);
+
+            if (mapq < MAP_QUALITY_THRESHOLD)
+            {
+                continue;
             }
-        }else
+            Cigar marlboro{mappingout.at(i).alignments.at(1).cigar_string};
+
+            std::string prefix = mappingout.at(i).ref.substr(0, mappingout.at(i).alignments.at(1).query_begin);
+
+            vhandler.call(
+                mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, // seq position
+                prefix,
+                mappingout.at(i).ref,
+                mappingout.at(i).query,
+                marlboro.getEntries(),
+                genome->names.at(mappingout.at(i).result.chromosomeId),
+                mappingout.at(i).readId,
+                mapq);
+        }
+    }
+    // vhandler.forceFlush();
+}
+
+INLINEQUALIFIER
+/// @brief converts every 'C' into a 'T'
+/// @param output
+/// @param input
+/// @param length
+void Mappinghandler::NucleoideConverer(char *output, const char *input, int length)
+{
+    if (strlen(input) != 0)
+    {
+
+        for (int i = 0; i < length; ++i)
+        {
+            switch (input[i])
+            {
+            case 'C':
+                output[i] = 'T';
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    else
         assert("Nucleotide Converter Failed");
-     }
-        
- uint32_t Mappinghandler::mapqfkt(int i, int j){
-     //MAPQ calculated as in CSSW 
-        //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
-         //Line 167 to  169
-     uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score - 
-                mappingout.at(i).alignments.at(j).sw_score_next_best)
-                /(double)mappingout.at(i).alignments.at(j).sw_score);
-			_mapq = (uint32_t) (_mapq + 4.99);
-			_mapq = _mapq < 254 ? _mapq : 254;
-            return _mapq;
- }
+}
 
-
-
+uint32_t Mappinghandler::mapqfkt(int i, int j)
+{
+    // MAPQ calculated as in CSSW
+    // https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
+    // Line 167 to  169
+    uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score -
+                                                  mappingout.at(i).alignments.at(j).sw_score_next_best) /
+                                          (double)mappingout.at(i).alignments.at(j).sw_score);
+    _mapq = (uint32_t)(_mapq + 4.99);
+    _mapq = _mapq < 254 ? _mapq : 254;
+    return _mapq;
+}
 
 /// @brief simple print methode for the vector mappingout into the "CSSW_SAM.SAM" file. Used for CSSW-Mapping
-void Mappinghandler::printtoSAM(){
-    
-    
-    std::ofstream outputstream("CSSW_SAM.SAM");
+void Mappinghandler::printtoSAM()
+{
+auto test = (programOptions->outputfile)+".SAM";
+    std::ofstream outputstream(test);
 
-    outputstream << "@HD\n"<<
-                    "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
-      
-    for(std::size_t i =0;i<mappingout.size();i++){
+    outputstream << "@HD\n"
+                 << "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
 
-        std::string samtag="";
-        uint32_t mapq=0;
-        int pos=0;
-        std::string cig="";
+    for (std::size_t i = 0; i < mappingout.size(); i++)
+    {
 
-       
+        std::string samtag = "";
+        uint32_t mapq = 0;
+        int pos = 0;
+        std::string cig = "";
 
-        if(mappingout.at(i).alignments.at(0).sw_score>=mappingout.at(i).alignments.at(1).sw_score){
-            //if(mappingout.at(i).alignments.at(0).sw_score>5)
-            //std::cout<<"1: "<<mappingout.at(i).alignments.at(0).sw_score<<" "<<i<<"\n";
+        if (mappingout.at(i).alignments.at(0).sw_score >= mappingout.at(i).alignments.at(1).sw_score)
+        {
+            // if(mappingout.at(i).alignments.at(0).sw_score>5)
+            // std::cout<<"1: "<<mappingout.at(i).alignments.at(0).sw_score<<" "<<i<<"\n";
             samtag.append("Yf:i:<");
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(0)));
             samtag.append(">");
-            samtag.append("YZ:A:<+>");//REF-3N
+            samtag.append("YZ:A:<+>"); // REF-3N
 
-            mapq=mapqfkt(i,0);
-            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin;
-            cig.append( mappingout.at(i).alignments.at(0).cigar_string );
-
-        }else{
-            //if(mappingout.at(i).alignments.at(1).sw_score>5)
-            //std::cout<<"2: "<<mappingout.at(i).alignments.at(1).sw_score<<" "<<i<<"\n";
+            mapq = mapqfkt(i, 0);
+            pos = mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin;
+            cig.append(mappingout.at(i).alignments.at(0).cigar_string);
+        }
+        else
+        {
+            // if(mappingout.at(i).alignments.at(1).sw_score>5)
+            // std::cout<<"2: "<<mappingout.at(i).alignments.at(1).sw_score<<" "<<i<<"\n";
             samtag.append("Yf:i:<");
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(1)));
             samtag.append(">");
-            samtag.append("YZ:A:<->");//REF-RC-3N
+            samtag.append("YZ:A:<->"); // REF-RC-3N
 
-            mapq=mapqfkt(i,1);
-            pos=mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
-            cig.append(mappingout.at(i).alignments.at(1).cigar_string );
+            mapq = mapqfkt(i, 1);
+            pos = mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
+            cig.append(mappingout.at(i).alignments.at(1).cigar_string);
         }
-        
-        outputstream << mappingout.at(i).readId<<"\t"                       //QNAME
-        << "*" <<"\t"                                                       // FLAG
-        << genome->names.at(mappingout.at(i).result.chromosomeId) <<"\t"    // RNAME
-        << pos <<"\t" // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
-        << mapq <<"\t"                                                      // MAPQ
-        <<cig<<"\t"                   // CIGAR
-        << "=" <<"\t"                                                // RNEXT
-        << "" <<"\t"                                                // PNEXT
-        << "0" <<"\t"                                               // TLEN
-        << mappingout.at(i).query <<"\t"                               // SEQ
-        << "*" <<"\t"                                                // QUAL
-        <<samtag <<"\t"                                             //TAG
-        <<"\n";
-    } 
+
+        outputstream << mappingout.at(i).readId << "\t" // QNAME
+                     << "*"
+                     << "\t"                                                           // FLAG
+                     << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
+                     << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                     << mapq << "\t"                                                   // MAPQ
+                     << cig << "\t"                                                    // CIGAR
+                     << "="
+                     << "\t" // RNEXT
+                     << ""
+                     << "\t" // PNEXT
+                     << "0"
+                     << "\t"                           // TLEN
+                     << mappingout.at(i).query << "\t" // SEQ
+                     << "*"
+                     << "\t"           // QUAL
+                     << samtag << "\t" // TAG
+                     << "\n";
+    }
     outputstream.close();
-    
 }
 
-     //Complete-Striped-Smith-Waterman Mapper.
-     //https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
-void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
+// Complete-Striped-Smith-Waterman Mapper.
+// https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
+void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
+{
 
-       StripedSmithWaterman::Aligner aligner;
-        StripedSmithWaterman::Filter filter;
-     
-        const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
+    StripedSmithWaterman::Aligner aligner;
+    StripedSmithWaterman::Filter filter;
 
+    const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
 
-        std::size_t numreads=cpuReadStorage->getNumberOfReads();
+    std::size_t numreads = cpuReadStorage->getNumberOfReads();
 
-    std::cout<<"lets go bigfor:...\n";
+    std::cout << "lets go bigfor:...\n";
 
     std::size_t processedResults = 0;
-   for(std::size_t r = 0; r < numreads; r++){
-    
-            const auto& result = (*results)[r];
-//            const auto& resultRC = (*resultsRC)[r];
-            
-            read_number readId = r;
-            
-            std::vector<int> readLengths(1);
-            cpuReadStorage->gatherSequenceLengths(
-                readLengths.data(),
-                &readId,
-                1
-            );
+    for (std::size_t r = 0; r < numreads; r++)
+    {
 
-            const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
-            std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
+        const auto &result = (*results)[r];
+        //            const auto& resultRC = (*resultsRC)[r];
 
-            cpuReadStorage->gatherSequences(
-                encodedReads.data(),
-                encodedReadNumInts2Bit,
-                &readId,
-                1
-            );
+        read_number readId = r;
 
+        std::vector<int> readLengths(1);
+        cpuReadStorage->gatherSequenceLengths(
+            readLengths.data(),
+            &readId,
+            1);
 
-           if(result.orientation == AlignmentOrientation::ReverseComplement){
-                SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-            }
+        const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
+        std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
 
-            auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
+        cpuReadStorage->gatherSequences(
+            encodedReads.data(),
+            encodedReadNumInts2Bit,
+            &readId,
+            1);
 
-            if(result.orientation != AlignmentOrientation::None ){
-               
-                const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
+        if (result.orientation == AlignmentOrientation::ReverseComplement)
+        {
+            SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
+        }
 
-                const std::size_t windowlength = result.position + 
-                    programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
-                    result.position;
-                const std::size_t windowlengthRC = result.position + 
-                    programOptions->windowSize < genomesequenceRC.size() ? programOptions->windowSize : genomesequenceRC.size() - 
-                    result.position;
+        auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
 
-                std::size_t aef=genomesequenceRC.size()-result.position-1;
-                std::string_view window(genomesequence.data() + result.position, windowlength);            
-                std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
+        if (result.orientation != AlignmentOrientation::None)
+        {
 
-                processedResults++;
+            const auto &genomesequence = (*genome).data.at(result.chromosomeId);
+            const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
-                int32_t maskLen = readLengths[0]/2;
-                maskLen = maskLen < 15 ? 15 : maskLen;
-                   
-                AlignerArguments ali;
-                
-                    ali.query=readsequence;
-                    ali.three_n_query.resize(readLengths[0]);
-                    NucleoideConverer(ali.three_n_query.data(), ali.query.c_str(), readLengths[0]);
-                    ali.rc_query=SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(),readLengths[0]); 
+            const std::size_t windowlength = result.position +
+                                                         programOptions->windowSize <
+                                                     genomesequence.size()
+                                                 ? programOptions->windowSize
+                                                 : genomesequence.size() -
+                                                       result.position;
+            const std::size_t windowlengthRC = result.position +
+                                                           programOptions->windowSize <
+                                                       genomesequenceRC.size()
+                                                   ? programOptions->windowSize
+                                                   : genomesequenceRC.size() -
+                                                         result.position;
 
-                    ali.three_n_rc_query.resize(readLengths[0]);  
-                    NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]); 
-                    
-                    ali.ref=std::string(window).c_str();
-                    ali.three_n_ref.resize(windowlength);
-                    NucleoideConverer(ali.three_n_ref.data() ,ali.ref.c_str(), windowlength);
-                    
-                    ali.rc_ref=std::string(windowRC).c_str();
-                    ali.three_n_rc_ref.resize(windowlengthRC);
-                    NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
+            std::size_t aef = genomesequenceRC.size() - result.position - 1;
+            std::string_view window(genomesequence.data() + result.position, windowlength);
+            std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
-                    ali.filter=filter;
-                    
-                    ali.maskLen=maskLen;
-                    ali.readId=readId; 
-                    ali.ref_len=windowlength;
-                   
-                    ali.result=result;
-//                    ali.resultRC=resultRC;
-                    
-                    ali.windowlength=windowlength;
+            processedResults++;
+
+            int32_t maskLen = readLengths[0] / 2;
+            maskLen = maskLen < 15 ? 15 : maskLen;
+
+            AlignerArguments ali;
+
+            ali.query = readsequence;
+            ali.three_n_query.resize(readLengths[0]);
+            NucleoideConverer(ali.three_n_query.data(), ali.query.c_str(), readLengths[0]);
+            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
+
+            ali.three_n_rc_query.resize(readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]);
+
+            ali.ref = std::string(window).c_str();
+            ali.three_n_ref.resize(windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.c_str(), windowlength);
+
+            ali.rc_ref = std::string(windowRC).c_str();
+            ali.three_n_rc_ref.resize(windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
+
+            ali.filter = filter;
+
+            ali.maskLen = maskLen;
+            ali.readId = readId;
+            ali.ref_len = windowlength;
+
+            ali.result = result;
+            //                    ali.resultRC=resultRC;
+
+            ali.windowlength = windowlength;
             //        ali.windowlengthRC=windowlengthRC;
 
+            mappingout.push_back(ali);
+        }
+        else
+        {
+            // no need to do sth. here
+        }
 
-                        mappingout.push_back(ali);
-                    
-               
-                }else{
-                    //no need to do sth. here
-                }
-            
-         
-        }//end of big for loop
-    
-   
-       std::cout<<"big for done, now to mapping:...\n";
+    } // end of big for loop
 
-        ThreadPool threadPool(std::max(1, programOptions->threads));
-       ThreadPool::ParallelForHandle pforHandle;
+    std::cout << "big for done, now to mapping:...\n";
 
-       //function that maps 2 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF 
-        auto mapfk=[&](auto begin, auto end, int /*threadid*/){
-          
-                for(auto i=begin; i< end; i++){
+    ThreadPool threadPool(std::max(1, programOptions->threads));
+    ThreadPool::ParallelForHandle pforHandle;
 
-                    // 3NQuery-3NREF
-                    StripedSmithWaterman::Alignment* ali;
-                    ali=&mappingout.at(i).alignments.at(0);
-                    aligner.Align(
-                        (mappingout.at(i).three_n_query).c_str(),
-                        (mappingout.at(i).three_n_ref).c_str(),
-                        mappingout.at(i).ref_len,
-                        mappingout.at(i).filter,
-                        ali,
-                        mappingout.at(i).maskLen);
+    // function that maps 2 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF
+    auto mapfk = [&](auto begin, auto end, int /*threadid*/)
+    {
+        for (auto i = begin; i < end; i++)
+        {
 
-                        // 3NRC_Query-3NREF
-                        StripedSmithWaterman::Alignment* alii;
-                    alii=&mappingout.at(i).alignments.at(1);
-                    aligner.Align(
-                        (mappingout.at(i).three_n_rc_query).c_str(),
-                        mappingout.at(i).three_n_ref.c_str(),
-                        mappingout.at(i).ref_len,
-                        mappingout.at(i).filter,
-                        alii,
-                        mappingout.at(i).maskLen);
+            // 3NQuery-3NREF
+            StripedSmithWaterman::Alignment *ali;
+            ali = &mappingout.at(i).alignments.at(0);
+            aligner.Align(
+                (mappingout.at(i).three_n_query).c_str(),
+                (mappingout.at(i).three_n_ref).c_str(),
+                mappingout.at(i).ref_len,
+                mappingout.at(i).filter,
+                ali,
+                mappingout.at(i).maskLen);
 
-                   
-                }
-        };
-        
-       
-        std::size_t start=0;
-        threadPool.parallelFor(pforHandle, start , mappingout.size() ,mapfk);
-       std::cout<<"mapped, now to recalculaion of AlignmentScore:...\n";
+            // 3NRC_Query-3NREF
+            StripedSmithWaterman::Alignment *alii;
+            alii = &mappingout.at(i).alignments.at(1);
+            aligner.Align(
+                (mappingout.at(i).three_n_rc_query).c_str(),
+                mappingout.at(i).three_n_ref.c_str(),
+                mappingout.at(i).ref_len,
+                mappingout.at(i).filter,
+                alii,
+                mappingout.at(i).maskLen);
+        }
+    };
 
-    auto recalculateAlignmentScorefk=[&](AlignerArguments& aa, const Cigar::Entries& cig, std::size_t h){
+    std::size_t start = 0;
+    threadPool.parallelFor(pforHandle, start, mappingout.size(), mapfk);
+    std::cout << "mapped, now to recalculaion of AlignmentScore:...\n";
 
-            StripedSmithWaterman::Alignment* ali=&aa.alignments.at(h);
-           int _num_conversions=0;
-           std::string* _query=&aa.query;
-           std::string* _ref=&aa.ref;
+    auto recalculateAlignmentScorefk = [&](AlignerArguments &aa, const Cigar::Entries &cig, std::size_t h)
+    {
+        StripedSmithWaterman::Alignment *ali = &aa.alignments.at(h);
+        int _num_conversions = 0;
+        std::string *_query = &aa.query;
+        std::string *_ref = &aa.ref;
 
-           if(!h){
-            _query=&aa.rc_query;
-           }  
+        if (!h)
+        {
+            _query = &aa.rc_query;
+        }
 
         int refPos = 0, altPos = 0;
 
-        for (const auto  & cigarEntry : cig) {
+        for (const auto &cigarEntry : cig)
+        {
 
             auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
 
-        switch (cigarEntry.first) {
-        case Cigar::Op::Match:
-            for (int i = 0; i < basesLeft; ++i) {
-                if (
-                    
-                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
-                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                ){
-                    continue;
+            switch (cigarEntry.first)
+            {
+            case Cigar::Op::Match:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
+                    }
+                    if (_query->at(altPos + i) == 'C')
+                    { // if its a mismatch
+
+                        if (('T' == _ref->at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
+                        {
+
+                            ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
+                            ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
+                        }
+                    }
+                    if (_query->at(altPos + i) == 'T')
+                    { // if its a conversion
+
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        {
+                            _num_conversions++;
+
+                            ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
+                            ali->sw_score += aligner.getScore('T', _ref->at(refPos + i)); // add corrected matching score
+                        }
+                    }
                 }
-                    if(_query->at(altPos + i)=='C'){//if its a mismatch 
-                    
-                    if(     ('T'==_ref->at(refPos + i) && 'A'== aa.rc_ref.at(refPos + i))
-                         || ('A'==_ref->at(refPos + i) && 'T'== aa.rc_ref.at(refPos + i))
-                    ){
-                       
-                        ali->sw_score-=aligner.getScore('T',_ref->at(refPos + i));//substract false matching score
-                    ali->sw_score+=aligner.getScore('C',_ref->at(refPos + i));//add corrected matching score
-                            
+
+                refPos += basesLeft;
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::Insert:
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::Delete:
+                refPos += basesLeft;
+                break;
+
+            case Cigar::Op::SoftClip:
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::HardClip:
+
+                break;
+
+            case Cigar::Op::Skipped:
+                refPos += basesLeft;
+                break;
+
+            case Cigar::Op::Padding:
+
+                break;
+
+            case Cigar::Op::Mismatch:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
                     }
-                    
-                    }
-                    if(_query->at(altPos + i)=='T'){//if its a conversion 
-                    
-                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
-                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
-                    ){
-                        _num_conversions++;
-
-                        ali->sw_score-=aligner.getScore('T','T');//substract false matching score
-                    ali->sw_score+=aligner.getScore('T',_ref->at(refPos + i));//add corrected matching score
-                            
-                    }
-                    
-                    }
-           
-                
-
-            }
-
-            refPos += basesLeft;
-            altPos += basesLeft;
-        break;
-
-        case Cigar::Op::Insert:
-            altPos += basesLeft;
-        break;
-
-        case Cigar::Op::Delete:
-            refPos += basesLeft;
-        break;
-
-        case Cigar::Op::SoftClip:
-            altPos += basesLeft;
-        break;
-
-        case Cigar::Op::HardClip:
-
-        break;
-
-        case Cigar::Op::Skipped:
-            refPos += basesLeft;
-        break;
-
-        case Cigar::Op::Padding:
-        
-        break;
-
-        case Cigar::Op::Mismatch:
-            for (int i = 0; i < basesLeft; ++i) {
-                if (
-                    
-                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
-                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                ){
-                    continue;
                 }
-                    
-            }
-            refPos +=basesLeft;
-            altPos += basesLeft;
-            
-        break;
+                refPos += basesLeft;
+                altPos += basesLeft;
 
-        case Cigar::Op::Equal:
-            for (int i = 0; i < basesLeft; ++i) {
-                if (
-                    
-                       _query->at(altPos + i) == _ref->at(refPos + i) //matching query and ref
-                    || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                    || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE 
-                ){
-                    continue;
+                break;
+
+            case Cigar::Op::Equal:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
+                    }
+                    if (_query->at(altPos + i) == 'T')
+                    { // if its a possible conversion
+
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        {
+                            _num_conversions++;
+
+                            ali->sw_score -= 2;
+                            ali->sw_score += aligner.getScore(_query->at(altPos + i), _ref->at(refPos + i));
+
+                            //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
+                        }
+                    }
                 }
-                    if(_query->at(altPos + i)=='T'){//if its a possible conversion
-                    
-                    if(     ('C'==_ref->at(refPos + i) && 'G'== aa.rc_ref.at(refPos + i))
-                         || ('G'==_ref->at(refPos + i) && 'C'== aa.rc_ref.at(refPos + i))
-                    ){
-                        _num_conversions++;
+                refPos += basesLeft;
+                altPos += basesLeft;
+                break;
 
-                        ali->sw_score-=2;
-                    ali->sw_score+=aligner.getScore(_query->at(altPos + i),_ref->at(refPos + i));
-
-       //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
-                    }
-                    
-                    }
-           
-                
-
+            default:
+                std::cout << "this shouldnt print\n";
+                break;
             }
-            refPos += basesLeft;
-            altPos += basesLeft;
-        break;
-
-        default:
-            std::cout<<"this shouldnt print\n";
-        break;
         }
 
+        aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
+    };
+
+    auto comparefk = [&](auto begin, auto end, int /*threadid*/)
+    {
+        for (auto i = begin; i < end; i++)
+        {
+            Cigar cigi{mappingout.at(i).alignments.at(0).cigar_string};
+            Cigar cigii{mappingout.at(i).alignments.at(1).cigar_string};
+
+            recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
+            recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
         }
-       
-       aa.num_conversions.at(h)=_num_conversions;//update AlignerArguments
-     };
+    };
 
-        auto comparefk=[&](auto begin, auto end, int /*threadid*/){
+    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
 
-            for(auto i=begin; i< end; i++){            
-                Cigar cigi{mappingout.at(i).alignments.at(0).cigar_string};
-                Cigar cigii{mappingout.at(i).alignments.at(1).cigar_string};
-                        
-                recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
-                recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
-                
-            }
-        };
-
-    threadPool.parallelFor(pforHandle, start , mappingout.size() ,comparefk);
- 
- 
     printtoSAM();
 
-}//end of CSSW-Mapping
+} // end of CSSW-Mapping
 
-       
-void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage){
+void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
+{
 
-        std::ofstream outputstream("examplemapper_out.txt");
-               
-        //std::cout<<"lets go Examplemapper!!\n";
-        const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
-        helpers::CpuTimer mappertimer("timerformapping");
-        std::size_t rundenzaehler=0;
+    std::ofstream outputstream("examplemapper_out.txt");
 
-        std::size_t numreads=cpuReadStorage->getNumberOfReads();
-        
-        for(std::size_t r = 0, processedResults = 0; r < numreads; r++){
-            const auto& result = (*results)[r];
-            read_number readId = r;
-            rundenzaehler++;
-            std::vector<int> readLengths(1);
-            cpuReadStorage->gatherSequenceLengths(
-                readLengths.data(),
-                &readId,
-                1
-            );
+    // std::cout<<"lets go Examplemapper!!\n";
+    const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
+    helpers::CpuTimer mappertimer("timerformapping");
+    std::size_t rundenzaehler = 0;
 
-            const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
-            std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
+    std::size_t numreads = cpuReadStorage->getNumberOfReads();
 
-            cpuReadStorage->gatherSequences(
-                encodedReads.data(),
-                encodedReadNumInts2Bit,
-                &readId,
-                1
-            );
+    for (std::size_t r = 0, processedResults = 0; r < numreads; r++)
+    {
+        const auto &result = (*results)[r];
+        read_number readId = r;
+        rundenzaehler++;
+        std::vector<int> readLengths(1);
+        cpuReadStorage->gatherSequenceLengths(
+            readLengths.data(),
+            &readId,
+            1);
 
+        const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
+        std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
 
-            if(result.orientation == AlignmentOrientation::ReverseComplement){
-                SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
-            }
-            auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
+        cpuReadStorage->gatherSequences(
+            encodedReads.data(),
+            encodedReadNumInts2Bit,
+            &readId,
+            1);
 
-            if(result.orientation != AlignmentOrientation::None){
-                              
-                const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-                
-                const std::size_t windowlength = result.position + 
-                    programOptions->windowSize < genomesequence.size() ? programOptions->windowSize : genomesequence.size() - 
-                    result.position;
+        if (result.orientation == AlignmentOrientation::ReverseComplement)
+        {
+            SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
+        }
+        auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
 
-                std::string_view window(genomesequence.data() + result.position, windowlength);
-                processedResults++;
-                
+        if (result.orientation != AlignmentOrientation::None)
+        {
 
-                /*Put your mapping algorithm here
-                *....
-                *use the variables "window" and "readsequence"
-                */
-                }else{
+            const auto &genomesequence = (*genome).data.at(result.chromosomeId);
 
-                }
-    mappertimer.print();
+            const std::size_t windowlength = result.position +
+                                                         programOptions->windowSize <
+                                                     genomesequence.size()
+                                                 ? programOptions->windowSize
+                                                 : genomesequence.size() -
+                                                       result.position;
+
+            std::string_view window(genomesequence.data() + result.position, windowlength);
+            processedResults++;
+
+            /*Put your mapping algorithm here
+             *....
+             *use the variables "window" and "readsequence"
+             */
+        }
+        else
+        {
+        }
+        mappertimer.print();
     }
 }
-      
-

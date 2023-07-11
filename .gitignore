@@ -31,3 +31,11 @@ shortreads_2.fastq
 logfile.txt
 bigforloop_threadpool.txt
 17_3_mappinghandler.txt
+alignment_result_hisat3n_prefixaa.sam
+ppaareads
+prefixaa
+prefixab
+prefixac
+prefixad
+standdardwithoutwarpcoreandonegpu.VCF
+xaa

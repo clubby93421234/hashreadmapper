@@ -1093,7 +1093,7 @@ void performMappingGpu(const ProgramOptions& programOptions){
     //results for rc 3n genome
    // std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
 
-ThreadPool threadPool(1);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
+ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
        ThreadPool::ParallelForHandle pforHandle;
        
         auto mapfk=[&](auto begin, auto end, int /*threadid*/){
