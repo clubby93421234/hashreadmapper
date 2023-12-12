@@ -276,7 +276,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         //            const auto& resultRC = (*resultsRC)[r];
 
         read_number readId = r;
-
+        //std::cout<<"dasd\n";
         std::vector<int> readLengths(1);
         cpuReadStorage->gatherSequenceLengths(
             readLengths.data(),
@@ -291,7 +291,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             encodedReadNumInts2Bit,
             &readId,
             1);
-
+//std::cout<<"vor if reversecomplemen\n";
         if (result.orientation == AlignmentOrientation::ReverseComplement)
         {
             SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
@@ -367,7 +367,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
     } // end of big for loop
 
     std::cout << "big for done, now to mapping:...\n";
-
+    mappingout.size();
     ThreadPool threadPool(std::max(1, programOptions->threads));
     ThreadPool::ParallelForHandle pforHandle;
 
@@ -556,9 +556,9 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
     };
 
     threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
-
+//std::cout<<"hello\n";
     printtoSAM();
-
+//std::cout<<"byby\n";
 } // end of CSSW-Mapping
 
 void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)

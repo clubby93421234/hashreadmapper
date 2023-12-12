@@ -1156,7 +1156,7 @@ ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threa
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
     Mappinghandler mapper(&programOptions, &genome, &genomeRC, &results
-   // , &resultsRC
+
     );
 
     helpers::CpuTimer timermapping("process mapping");
