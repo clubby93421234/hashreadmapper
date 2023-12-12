@@ -188,7 +188,14 @@ namespace gpu{
             tempdataVector[id] = nullptr;
             handle = constructHandle(std::numeric_limits<int>::max());
         }
+/*
+This code is a C++ function called determineNumValues that is a member of a class which implements a MinHash-based algorithm for approximate string matching. The purpose of this function is to calculate the number of candidate pairs that will be considered for each sequence in the dataset being queried.
 
+The function takes several arguments, including a handle to a MinHasher object, pointers to device memory containing the encoded sequence data, an array of sequence lengths, and the number of sequences being queried. It also takes a pointer to an array where the number of candidate pairs for each sequence will be stored, as well as a reference to an integer variable where the total number of candidate pairs across all sequences will be stored. The function uses CUDA to perform the calculations in parallel on a GPU.
+
+The function first initializes some data structures and sets up the MinHash function by calling another function that performs the hashing. The results of the hashing are then copied from device memory to host memory. The function then uses a lambda function to process each sequence in parallel. For each sequence, the function loops over all the MinHash functions and checks whether the signature for that function is valid (i.e., whether it was computed for that sequence). For valid signatures, the function retrieves the corresponding list of candidate pairs from a hash table and counts the number of pairs. If the number of pairs is below a threshold, the pairs are added to the running total for that sequence. If the number of pairs exceeds the threshold, the function sets the range of candidate pairs to an empty range, indicating that no pairs will be considered for that sequence and MinHash function combination. The function then stores the range in an array so that it can be used in a later stage of the algorithm.
+
+Finally, the function copies the array of candidate pair counts from host memory back to device memory, sets a flag indicating that the function has completed this stage, and returns.*/
         void determineNumValues(
             MinhasherHandle& queryHandle,
             const unsigned int* d_sequenceData2Bit,

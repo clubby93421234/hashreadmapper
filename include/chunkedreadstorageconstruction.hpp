@@ -44,7 +44,7 @@ std::unique_ptr<ChunkedReadStorage> constructChunkedReadStorageFromFiles(
         return readStorage;
     }else{
         const bool pairedEnd = programOptions.pairType == SequencePairType::PairedEnd;
-//INFO: hier sind die encodeten reads gespeichert---------------------------------------------------------------------------        
+     
         std::unique_ptr<ChunkedReadStorage> readStorage = std::make_unique<ChunkedReadStorage>(pairedEnd, useQualityScores, numQualityBits);
 
         const bool showProgress = programOptions.showProgress;
@@ -334,7 +334,7 @@ std::unique_ptr<ChunkedReadStorage> constructChunkedReadStorageFromFiles(
                         sbatch->ambiguousReadIds
                     );
                 }
-//INFO: hier werden die encodeten Reads gespeichert
+
                 readStorage->appendConsecutiveReads(
                     sbatch->firstReadId,
                     sbatch->validItems,

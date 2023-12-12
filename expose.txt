@@ -1,0 +1,19 @@
+Expose
+
+The primary objective of this Master's thesis is to develop a cutting-edge computational tool that enables the alignment of a unique type of DNA sequencing (DNA-seq) reads to a reference genome.
+These reads incorporate chemically altered nucleotides, primarily utilized for marking DNA methylation events. 
+They are modified by using the widely used Bisulfie Sequencing method[1], that utilizes bisulfite-induced modification of genomic DNA to alter unmethylated cytosine to uracil.
+To determine the methylation status of cytosine, the reads are compared with a reference genome. 
+Notably, several established CPU-based tools such as HISAT-3N[2] or BS-Seeker[3] as well as  GPU-based solutions such as BiocMAP[4] or GPU-BSM[5], already exist in this domain.
+The central objective of this thesis is to design a GPU-based tool that advance the alignment process by focusing on indexing the reads instead of the genome itself.In pursuit of this goal, innovative computational aids like Warpcore [6] and the Shifted Hamming Distance [7] will be employed.
+The proposed approach involves dynamically indexing the DNA-seq reads on a GPU using the Warpcore framework, while streaming the reference genome. The Shifted Hamming Distance algorithm will then identify the most suitable read for each segment of the genome being processed, significantly reducing the computational burden associated with alignments. Finally, the selected reads and the reference genome will be aligned using the SSW Library [8], a widely adopted toolkit for sequence alignment.
+By employing GPU-based processing, leveraging novel indexing techniques, and incorporating advanced computational aids, this research aims to advance the field of DNA-seq read alignment. The proposed tool holds the potential to enhance the efficiency and accuracy of DNA methylation analysis and related genomic studies, offering valuable insights into biological processes and disease mechanisms.
+
+[1] BS-Seq: 10.1073/pnas.89.5.1827
+[2] HISAT-3N: 10.1101/gr.275193.120
+[3] BS-Seeker: 10.1186/s12859-018-2120-7
+[4] BiocMAP: 10.1101/2022.04.20.488947
+[5] GPU-BSM: 10.1371/journal.pone.0097277
+[6] Warpcore: 10.1109/HiPC50609.2020.00015
+[7] Shifted Hamming Distance: 10.1093/bioinformatics/btu856
+[8] SSW Library: 10.1371/journal.pone.0082138
