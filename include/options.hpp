@@ -43,7 +43,7 @@ namespace care
 
         SequencePairType pairType = SequencePairType::SingleEnd;
 
-        MapperType mappType = MapperType::primitiveSW;
+        MapperType mappType = MapperType::SW;
 
         std::size_t memoryForHashtables = 0;
         std::size_t memoryTotalLimit = 0;
