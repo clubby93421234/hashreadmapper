@@ -295,10 +295,10 @@ namespace care{
                 "SE / se : Single-end reads"
                 "PE / pe : Paired-end reads",
                 cxxopts::value<std::string>())
-            ("mappertype", 
+           ("mappertype", 
                 "Type of mapping algoithm."
-                "SW / sw : Smith-Waterman"
-                "PSW / psw : primitiv Smith-Waterman",
+                "Others can be implemented."
+                "SW / sw : Smith-Waterman",
                 cxxopts::value<std::string>())
             ("memHashtables", "Memory limit in bytes for hash tables and hash table construction. Can use suffix K,M,G , e.g. 20G means 20 gigabyte. This option is not a hard limit. Default: A bit less than memTotal.",
             cxxopts::value<std::string>())
