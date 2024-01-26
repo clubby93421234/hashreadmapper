@@ -34,7 +34,7 @@
 #include "varianthandler.hpp"
 
 #include <gpu/mappedread.cuh>
-
+#include "edlib-master/edlib/include/edlib.h"
 using namespace care;
 
 class Mappinghandler{
@@ -97,11 +97,31 @@ struct AlignerArguments{
 
         };
 
+        //------------------------------------------------------------------------------
+struct edlibhelper{
+    char* queryOriginal; 
+     char* queryOriginal_threen;
+     char* queryOriginal_rc; 
+     char* queryOriginal_rc_threen; 
+    int queryLength;
+
+    char* targetOriginal;
+     char* targetOriginal_threen;
+     char* targetOriginal_rc;
+     char* targetOriginal_rc_threen;
+    int targetLength;    
+    EdlibAlignResult er;
+};
+//-----------------------------------------------------------------------
         void printtoSAM();
         void CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
+
+        void edlibAligner(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
         void examplewrapper(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
         uint32_t mapqfkt(int i, int j);
         std::vector<AlignerArguments> mappingout;
+
+        std::vector<elibhelper> edlibout;
 };
 
 #endif

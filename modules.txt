@@ -1,0 +1,51 @@
+
+system/CUDAcore/11.0.3    
+   system/CUDAcore/11.1.1 
+   system/CUDAcore/11.2.2   
+   system/CUDAcore/11.3.0 (D)
+
+system/CUDA/8.0.61
+   system/CUDA/9.2.88
+   system/CUDA/10.1.243-GCC-8.3.0
+   system/CUDA/11.0.3-GCC-9.3.0
+   system/CUDA/11.0.3-iccifort-2020.1.217
+   system/CUDA/11.1.1-GCC-10.2.0
+   system/CUDA/11.2.2-GCC-10.2.0
+   system/CUDA/11.3.1
+   system/CUDA/11.4.2
+   system/CUDA/11.6.1
+   system/CUDA/11.8.0                                    (D)
+
+compiler/GCC/4.7.2
+   compiler/GCC/4.8.3
+   compiler/GCC/6.3.0
+   compiler/GCC/6.4.0
+   compiler/GCC/7.2.0
+   compiler/GCC/7.3.0
+   compiler/GCC/8.1.0
+   compiler/GCC/8.3.0
+   compiler/GCC/9.3.0
+   compiler/GCC/10.2.0
+   compiler/GCC/10.3.0
+   compiler/GCC/11.2.0
+   compiler/GCC/11.3.0
+   compiler/GCC/11.4.0
+   compiler/GCC/12.2.0                                      (D)
+   compiler/GCCcore/6.3.0
+   compiler/GCCcore/6.4.0
+   compiler/GCCcore/7.2.0
+   compiler/GCCcore/7.3.0
+   compiler/GCCcore/8.1.0
+   compiler/GCCcore/8.3.0
+   compiler/GCCcore/9.2.0
+   compiler/GCCcore/9.3.0
+   compiler/GCCcore/10.2.0
+   compiler/GCCcore/10.3.0
+   compiler/GCCcore/11.2.0
+   compiler/GCCcore/11.3.0
+   compiler/GCCcore/11.4.0
+   compiler/GCCcore/12.1.0
+   compiler/GCCcore/12.2.0                                  (D)
+   
+   ./main-gpu -p --warpcore 0 -g 0 --genomefile GRCh38.fa -o HD_0_5_prefixaa_out -t 48  -i prefixaa --mappertype sw --maxHammingPercent 0.5
+

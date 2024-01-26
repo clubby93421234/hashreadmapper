@@ -34,6 +34,8 @@
 
 #include <gpu/mappedread.cuh>
 
+
+
 /// @brief
 /// @param programOptions_
 /// @param genome_
@@ -67,9 +69,9 @@ void Mappinghandler::go(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage_)
 
     switch (programOptions->mappType)
     {
-    case MapperType::primitiveSW:
-        std::cout << "primitive SW selected but should not be used!\n";
-        // primitiveSW(cpuReadStorage_);
+    case MapperType::edlib:
+        std::cout << "edlib selected!\n";
+         edlibAligner(cpuReadStorage_);
         break;
     case MapperType::SW:
         // std::cout<<"SW selected \n";
@@ -624,4 +626,106 @@ void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage> &cpuRead
         }
         mappertimer.print();
     }
+}
+
+void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
+{
+
+    std::ofstream outputstream("examplemapper_out.txt");
+
+    // std::cout<<"lets go Examplemapper!!\n";
+    const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
+    helpers::CpuTimer mappertimer("timerformapping");
+    std::size_t rundenzaehler = 0;
+
+    std::size_t numreads = cpuReadStorage->getNumberOfReads();
+
+    for (std::size_t r = 0, processedResults = 0; r < numreads; r++)
+    {
+        const auto &result = (*results)[r];
+        read_number readId = r;
+        rundenzaehler++;
+        std::vector<int> readLengths(1);
+        cpuReadStorage->gatherSequenceLengths(
+            readLengths.data(),
+            &readId,
+            1);
+
+        const int encodedReadNumInts2Bit = SequenceHelpers::getEncodedNumInts2Bit(maximumSequenceLength);
+        std::vector<unsigned int> encodedReads(encodedReadNumInts2Bit * 1);
+
+        cpuReadStorage->gatherSequences(
+            encodedReads.data(),
+            encodedReadNumInts2Bit,
+            &readId,
+            1);
+
+        if (result.orientation == AlignmentOrientation::ReverseComplement)
+        {
+            SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
+        }
+        auto readsequence = SequenceHelpers::get2BitString(encodedReads.data(), readLengths[0]);
+
+        if (result.orientation != AlignmentOrientation::None)
+        {
+
+            const auto &genomesequence = (*genome).data.at(result.chromosomeId);
+
+            const std::size_t windowlength = result.position +
+                                                         programOptions->windowSize <
+                                                     genomesequence.size()
+                                                 ? programOptions->windowSize
+                                                 : genomesequence.size() -
+                                                       result.position;
+
+            
+            processedResults++;
+            std::size_t aef = genomesequenceRC.size() - result.position - 1;
+            std::string_view window(genomesequence.data() + result.position, windowlength);
+            std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
+
+            edlibhelper eh;
+            eh.queryLength = readLengths[0];
+            eh.queryOriginal = readsequence;
+            eh.queryOriginal.resize(readLengths[0]);
+            NucleoideConverer(eh.queryOriginal_threen.data(), eh.queryOriginal.c_str(), readLengths[0]);
+            eh.queryOriginal_rc = SequenceHelpers::reverseComplementSequenceDecoded(eh.queryOriginal.data(), readLengths[0]);
+
+            eh.queryOriginal_rc_threen.resize(readLengths[0]);
+            NucleoideConverer(eh.queryOriginal_rc_threen.data(), eh.queryOriginal_rc.c_str(), readLengths[0]);
+
+            eh.targetLength=windowlength;
+            eh.targetOriginal = std::string(window).c_str();
+            eh.targetOriginal_threen.resize(windowlength);
+            NucleoideConverer(eh.targetOriginal_threen.data(), eh.targetOriginal.c_str(), windowlength);
+
+            eh.targetOriginal_rc= std::string(windowRC).c_str();
+            eh.targetOriginal_rc_threen.resize(windowlengthRC);
+            NucleoideConverer(eh.targetOriginal_rc_threen.data(), eh.targetOriginal_rc.c_str(), windowlengthRC);
+
+            edlibout.push_back(eh);
+            /*Put your mapping algorithm here
+             *....
+             *use the variables "window" and "readsequence"
+             */
+        }
+        else
+        {
+        }
+        mappertimer.print();
+    }//end of big for loop
+     std::cout << "big for done, now to mapping:...\n";
+    std::cout << "we have "<<mappingout.size()<<" to map\n";
+    ThreadPool threadPool(std::max(1, programOptions->threads));
+    ThreadPool::ParallelForHandle pforHandle;
+
+    // function that maps 2 alignments: 3NQuery-3NREF , 3NRC_Query-3NREF
+    auto mapfk = [&](auto begin, auto end, int /*threadid*/)
+    {
+       for (auto i = begin; i < end; i++)
+        {
+            
+        } 
+    }
+
 }
