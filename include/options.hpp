@@ -17,7 +17,7 @@ namespace care
     };
 
     enum class MapperType{
-        primitiveSW = 0,
+        edlib = 0,
         SW = 1,
         sthelse = 2 
     };
