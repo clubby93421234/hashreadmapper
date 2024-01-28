@@ -34,7 +34,7 @@
 
 #include <gpu/mappedread.cuh>
 
-
+#include "edlib.h"
 
 /// @brief
 /// @param programOptions_
@@ -233,24 +233,45 @@ auto test = (programOptions->outputfile)+".SAM";
             pos = mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
             cig.append(mappingout.at(i).alignments.at(1).cigar_string);
         }
-
-        outputstream << mappingout.at(i).readId << "\t" // QNAME
-                     << samflag << "\t"                                                // FLAG
-                     << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
-                     << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
-                     << mapq << "\t"                                                   // MAPQ
-                     << cig << "\t"                                                    // CIGAR
-                     << "="
-                     << "\t" // RNEXT
-                     << ""
-                     << "\t" // PNEXT
-                     << "0"
-                     << "\t"                           // TLEN
-                     << mappingout.at(i).query << "\t" // SEQ
-                     << "*"
-                     << "\t"           // QUAL
-                     << samtag << "\t" // TAG
-                     << "\n";
+        if ((mappingout.at(i).flag & 0x4) == 0) {//check if unmapped bit is not set
+            outputstream << mappingout.at(i).readId << "\t" // QNAME
+                << samflag << "\t"                                                // FLAG
+                << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
+                << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << mapq << "\t"                                                   // MAPQ
+                << cig << "\t"                                                    // CIGAR
+                << "="
+                << "\t" // RNEXT
+                << ""
+                << "\t" // PNEXT
+                << "0"
+                << "\t"                           // TLEN
+                << mappingout.at(i).query << "\t" // SEQ
+                << "*"
+                << "\t"           // QUAL
+                << samtag << "\t" // TAG
+                << "\n";
+        }
+        else {//print unmapped
+            
+            outputstream << mappingout.at(i).readId << "\t" // QNAME
+                << samflag << "\t"                                                // FLAG
+                << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
+                << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << "\t"                                                   // MAPQ
+                << "\t"                                                    // CIGAR
+                << "="
+                << "\t" // RNEXT
+                << ""
+                << "\t" // PNEXT
+                << "0"
+                << "\t"                           // TLEN
+                << mappingout.at(i).query << "\t" // SEQ
+                << "*"
+                << "\t"           // QUAL
+                << mappingout.at(i).flag << "\t" // TAG
+                << "\n";
+        }
     }
     outputstream.close();
 }
@@ -362,7 +383,31 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         }
         else
         {
-            // no need to do sth. here
+            const auto& genomesequence = (*genome).data.at(result.chromosomeId);
+            const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
+
+            const std::size_t windowlength = result.position +
+                programOptions->windowSize <
+                genomesequence.size()
+                ? programOptions->windowSize
+                : genomesequence.size() -
+                result.position;
+            const std::size_t windowlengthRC = result.position +
+                programOptions->windowSize <
+                genomesequenceRC.size()
+                ? programOptions->windowSize
+                : genomesequenceRC.size() -
+                result.position;
+
+            std::size_t aef = genomesequenceRC.size() - result.position - 1;
+            std::string_view window(genomesequence.data() + result.position, windowlength);
+            std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
+
+            AlignerArguments ali;
+
+            ali.query = readsequence;
+            ali.flag |= 0x4;
+            mappingout.push_back(ali);
         }
 
     } // end of big for loop
@@ -377,28 +422,32 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
     {
         for (auto i = begin; i < end; i++)
         {
+            if ((mappingout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
+                // 3NQuery-3NREF
+                StripedSmithWaterman::Alignment* ali;
+                ali = &mappingout.at(i).alignments.at(0);
+                mappingout.at(i).flag = aligner.Align(
+                    (mappingout.at(i).three_n_query).c_str(),
+                    (mappingout.at(i).three_n_ref).c_str(),
+                    mappingout.at(i).ref_len,
+                    mappingout.at(i).filter,
+                    ali,
+                    mappingout.at(i).maskLen);
 
-            // 3NQuery-3NREF
-            StripedSmithWaterman::Alignment *ali;
-            ali = &mappingout.at(i).alignments.at(0);
-            mappingout.at(i).flag=aligner.Align(
-                (mappingout.at(i).three_n_query).c_str(),
-                (mappingout.at(i).three_n_ref).c_str(),
-                mappingout.at(i).ref_len,
-                mappingout.at(i).filter,
-                ali,
-                mappingout.at(i).maskLen);
-
-            // 3NRC_Query-3NREF
-            StripedSmithWaterman::Alignment *alii;
-            alii = &mappingout.at(i).alignments.at(1);
-            mappingout.at(i).flag_rc= aligner.Align(
-                (mappingout.at(i).three_n_rc_query).c_str(),
-                mappingout.at(i).three_n_ref.c_str(),
-                mappingout.at(i).ref_len,
-                mappingout.at(i).filter,
-                alii,
-                mappingout.at(i).maskLen);
+                // 3NRC_Query-3NREF
+                StripedSmithWaterman::Alignment* alii;
+                alii = &mappingout.at(i).alignments.at(1);
+                mappingout.at(i).flag_rc = aligner.Align(
+                    (mappingout.at(i).three_n_rc_query).c_str(),
+                    mappingout.at(i).three_n_ref.c_str(),
+                    mappingout.at(i).ref_len,
+                    mappingout.at(i).filter,
+                    alii,
+                    mappingout.at(i).maskLen);
+            }
+            else {//ignore unmapped
+                continue;
+            }
         }
     };
 
@@ -548,11 +597,17 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
     {
         for (auto i = begin; i < end; i++)
         {
-            Cigar cigi{mappingout.at(i).alignments.at(0).cigar_string};
-            Cigar cigii{mappingout.at(i).alignments.at(1).cigar_string};
+            if ((mappingout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
 
-            recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
-            recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+                Cigar cigi{ mappingout.at(i).alignments.at(0).cigar_string };
+                Cigar cigii{ mappingout.at(i).alignments.at(1).cigar_string };
+
+                recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
+                recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+            }
+            else {//ignore unmapped
+                continue;
+            }
         }
     };
 
@@ -710,6 +765,31 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
         }
         else
         {
+            const auto& genomesequence = (*genome).data.at(result.chromosomeId);
+            const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
+
+            const std::size_t windowlength = result.position +
+                programOptions->windowSize <
+                genomesequence.size()
+                ? programOptions->windowSize
+                : genomesequence.size() -
+                result.position;
+            const std::size_t windowlengthRC = result.position +
+                programOptions->windowSize <
+                genomesequenceRC.size()
+                ? programOptions->windowSize
+                : genomesequenceRC.size() -
+                result.position;
+
+            std::size_t aef = genomesequenceRC.size() - result.position - 1;
+            std::string_view window(genomesequence.data() + result.position, windowlength);
+            std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
+
+            edlibhelper eh;
+            eh.queryLength = readLengths[0];
+            eh.queryOriginal = readsequence;
+            eh.flag |= 0x4;
+            mappingout.push_back(eh);
         }
         mappertimer.print();
     }//end of big for loop
@@ -723,7 +803,20 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
     {
        for (auto i = begin; i < end; i++)
         {
-            
+           if ((mappingout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
+              // 3NQuery-3NREF
+               EdlibAlignResult result = edlibAlign("hello", 5, "world!", 6, edlibDefaultAlignConfig());
+               if (result.status == EDLIB_STATUS_OK) {
+                   printf("edit_distance('hello', 'world!') = %d\n", result.editDistance);
+               }
+               edlibFreeAlignResult(result);
+
+               // 3NRC_Query-3NREF
+               
+           }
+           else {//ignore unmapped
+               continue;
+           }
         } 
     }
 
