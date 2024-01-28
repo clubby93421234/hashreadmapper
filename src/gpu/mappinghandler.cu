@@ -206,7 +206,7 @@ auto test = (programOptions->outputfile)+".SAM";
         uint32_t mapq = 0;
         int pos = 0;
         std::string cig = "";
-
+        uint16_t samflag=0;
         if (mappingout.at(i).alignments.at(0).sw_score >= mappingout.at(i).alignments.at(1).sw_score)
         {
             // if(mappingout.at(i).alignments.at(0).sw_score>5)
@@ -215,7 +215,7 @@ auto test = (programOptions->outputfile)+".SAM";
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(0)));
             samtag.append(">");
             samtag.append("YZ:A:<+>"); // REF-3N
-
+            samflag=mappingout.at(i).flag;
             mapq = mapqfkt(i, 0);
             pos = mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin;
             cig.append(mappingout.at(i).alignments.at(0).cigar_string);
@@ -228,15 +228,14 @@ auto test = (programOptions->outputfile)+".SAM";
             samtag.append(std::to_string(mappingout.at(i).num_conversions.at(1)));
             samtag.append(">");
             samtag.append("YZ:A:<->"); // REF-RC-3N
-
+            samflag=mappingout.at(i).flag_rc;
             mapq = mapqfkt(i, 1);
             pos = mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin;
             cig.append(mappingout.at(i).alignments.at(1).cigar_string);
         }
 
         outputstream << mappingout.at(i).readId << "\t" // QNAME
-                     << "*"
-                     << "\t"                                                           // FLAG
+                     << samflag << "\t"                                                // FLAG
                      << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
                      << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
                      << mapq << "\t"                                                   // MAPQ
@@ -382,7 +381,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             // 3NQuery-3NREF
             StripedSmithWaterman::Alignment *ali;
             ali = &mappingout.at(i).alignments.at(0);
-            aligner.Align(
+            mappingout.at(i).flag=aligner.Align(
                 (mappingout.at(i).three_n_query).c_str(),
                 (mappingout.at(i).three_n_ref).c_str(),
                 mappingout.at(i).ref_len,
@@ -393,7 +392,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             // 3NRC_Query-3NREF
             StripedSmithWaterman::Alignment *alii;
             alii = &mappingout.at(i).alignments.at(1);
-            aligner.Align(
+            mappingout.at(i).flag_rc= aligner.Align(
                 (mappingout.at(i).three_n_rc_query).c_str(),
                 mappingout.at(i).three_n_ref.c_str(),
                 mappingout.at(i).ref_len,
