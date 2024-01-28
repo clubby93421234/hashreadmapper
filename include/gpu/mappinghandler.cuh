@@ -64,7 +64,9 @@ class Mappinghandler{
         INLINEQUALIFIER
         void NucleoideConverer(char* output, const char* input, int length);
 
-struct AlignerArguments{           
+struct AlignerArguments{
+    uint16_t flag=0;
+    uint16_t flag_rc=0;           
            std::string query;
             std::string three_n_query;   //3 nucleotide query
           std::string rc_query;

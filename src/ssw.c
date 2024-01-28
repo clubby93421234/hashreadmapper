@@ -56,7 +56,7 @@
  *
  *  Created by Mengyao Zhao on 6/22/10.
  *  Copyright 2010 Boston College. All rights reserved.
- *	Version 1.2.4
+ *	Version 1.2.5
  *	Last revision by Mengyao Zhao on 2022-Apr-17.
  *
  *  The lazy-F loop implementation was derived from SWPS3, which is
@@ -308,7 +308,9 @@ static alignment_end* sw_sse2_byte (const int8_t* ref,
 				_mm_store_si128(pvHStore + j, vH);
 				vH = _mm_subs_epu8(vH, vGapO);
 				vF = _mm_subs_epu8(vF, vGapE);
-				if (UNLIKELY(! _mm_movemask_epi8(_mm_cmpgt_epi8(vF, vH)))) goto end;
+                vTemp = _mm_subs_epu8(vF, vH);
+                vTemp = _mm_cmpeq_epi8 (vTemp, vZero);
+                if (UNLIKELY(_mm_movemask_epi8(vTemp) == 0xffff)) goto end;
 			}
 		}
 
