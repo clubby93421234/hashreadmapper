@@ -113,6 +113,8 @@ struct edlibhelper{
      char* targetOriginal_rc_threen;
     int targetLength;    
     EdlibAlignResult er;
+    uint16_t flag = 0;
+    uint16_t flag_rc = 0;
 };
 //-----------------------------------------------------------------------
         void printtoSAM();
