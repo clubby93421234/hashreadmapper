@@ -1,0 +1,37 @@
+#!/bin/bash
+#-----------------------------------------------------------------
+# Example SLURM job script to run serial applications on Mogon.
+#
+# This script requests one task using all cores (48) on one node.
+# The job will have access to all the memory and all 6 GPUs in the node.
+#-----------------------------------------------------------------
+
+#SBATCH -A m2_jgu-paa		 # Account
+#SBATCH -J hashreadmapper10mil        # Job name
+#SBATCH -o small48cpu3gpu.%j.out # Specify stdout output file (%j expands to jobId)
+#SBATCH -p m2_gpu                # Partition name
+#SBATCH -N 1                     # Total number of nodes requested (48 cores/node per GPU node)
+#SBATCH -n 1                     # Total number of tasks
+#SBATCH -c 48                    # CPUs per task
+#SBATCH -t 01:00:00              # Run time (hh:mm:ss) - 0.5 hours
+#SBATCH --gres=gpu:3             # Reserve 6 GPUs
+
+
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=chsteiss@students.uni-mainz.de
+
+# Load all necessary modules if needed (these are examples)
+# Loading modules in the script ensures a consistent environment.
+
+#
+module load lib/zlib/1.2.12
+module load compiler/GCCcore/11.3.0
+module load compiler/GCC/11.3.0
+module load system/CUDAcore/11.3.0
+module load system/CUDA/11.6.1
+#module load system/CUDA/11.8.0
+#
+#nvidia-smi
+#./main-gpu
+srun  ./main-gpu -p -g 0,1,2 --genomefile GRCh38.fa -o readsstandard_out -t 48  --mappertype sw -i ../kleiner10mil.fasta -i ../kleinerab
+#--save-hashtables-to ../reads54milpp
