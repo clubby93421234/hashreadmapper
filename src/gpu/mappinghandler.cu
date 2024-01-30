@@ -809,9 +809,9 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
         {
            if ((edlibout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
               // 3NQuery-3NREF
-               EdlibAlignResult result = edlibAlign(edlibout.at(i).queryOriginal_threen,
+               EdlibAlignResult result = edlibAlign(edlibout.at(i).queryOriginal_threen.c_str(),
                                                     edlibout.at(i).queryLength,
-                                                    edlibout.at(i).targetOriginal_threen,
+                                                    edlibout.at(i).targetOriginal_threen.c_str(),
                                                     edlibout.at(i).targetLength, 
                                                     edlibDefaultAlignConfig());
                if (result.status == EDLIB_STATUS_OK) {
@@ -824,9 +824,9 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                edlibFreeAlignResult(result);
 
                // 3NRC_Query-3NREF
-               EdlibAlignResult resultrc = edlibAlign(edlibout.at(i).queryOriginal_rc_threen,
+               EdlibAlignResult resultrc = edlibAlign(edlibout.at(i).queryOriginal_rc_threen.c_str(),
                    edlibout.at(i).queryLength,
-                   edlibout.at(i).targetOriginal_rc_threen,
+                   edlibout.at(i).targetOriginal_rc_threen.c_str(),
                    edlibout.at(i).targetLength,
                    edlibDefaultAlignConfig());
                if (result.status == EDLIB_STATUS_OK) {
