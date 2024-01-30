@@ -724,6 +724,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
         {
 
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
+            const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
             const std::size_t windowlength = result.position +
                                                          programOptions->windowSize <
@@ -731,6 +732,12 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                                                  ? programOptions->windowSize
                                                  : genomesequence.size() -
                                                        result.position;
+            const std::size_t windowlengthRC = result.position +
+                                                           programOptions->windowSize <
+                                                       genomesequenceRC.size()
+                                                   ? programOptions->windowSize
+                                                   : genomesequenceRC.size() -
+                                                         result.position;
 
             
             processedResults++;
@@ -782,7 +789,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             std::string_view window(genomesequence.data() + result.position, windowlength);
             std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
-            edlibhelper eh;
+            Edlibhelper eh;
             eh.queryLength = readLengths[0];
             eh.queryOriginal = readsequence;
             eh.flag |= 0x4;
@@ -836,21 +843,22 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                continue;
            }
         } 
-    }
+    };
     std::size_t start = 0;
-    threadPool.parallelFor(pforHandle, start, mappingout.size(), mapfk);
+    threadPool.parallelFor(pforHandle, start, edlibout.size(), mapfk);
     std::cout << "mapped, now to recalculaion of AlignmentScore:...\n";
 
     auto recalculateAlignmentScorefk = [&](Edlibhelper& aa, const Cigar::Entries& cig, std::size_t h)
     {
-        StripedSmithWaterman::Alignment* ali = &aa.alignments.at(h);
+       
         int _num_conversions = 0;
-        std::string* _query = &aa.query;
-        std::string* _ref = &aa.ref;
-
+        std::string* _query = &aa.queryOriginal;
+        std::string* _ref = &aa.targetOriginal;
+        int temp_score=aa.score;
         if (!h)
         {
-            _query = &aa.rc_query;
+            temp_score=aa.score_rc;
+            _query = &aa.queryOriginal_rc;
         }
 
         int refPos = 0, altPos = 0;
@@ -876,22 +884,22 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                     if (_query->at(altPos + i) == 'C')
                     { // if its a mismatch
 
-                        if (('T' == _ref->at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
+                        if (('T' == _ref->at(refPos + i) && 'A' == aa.targetOriginal_rc.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
                         {
 
-                            ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
-                            ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
+                           // ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
+                           // ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
                         }
                     }
                     if (_query->at(altPos + i) == 'T')
                     { // if its a conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
 
-                            ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
-                            ali->sw_score += aligner.getScore('T', _ref->at(refPos + i)); // add corrected matching score
+                           // ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
+                           // ali->sw_score += aligner.getScore('T', _ref->at(refPos + i)); // add corrected matching score
                         }
                     }
                 }
@@ -955,12 +963,12 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                     if (_query->at(altPos + i) == 'T')
                     { // if its a possible conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
 
-                            ali->sw_score -= 2;
-                            ali->sw_score += aligner.getScore(_query->at(altPos + i), _ref->at(refPos + i));
+                          //  ali->sw_score -= 2;
+                         //   ali->sw_score += aligner.getScore(_query->at(altPos + i), _ref->at(refPos + i));
 
                             //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
                         }
@@ -976,7 +984,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             }
         }
 
-        aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
+        //aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
     };
 
     auto comparefk = [&](auto begin, auto end, int /*threadid*/)

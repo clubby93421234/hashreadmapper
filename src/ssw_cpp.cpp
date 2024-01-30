@@ -412,7 +412,36 @@ void Aligner::SetAllDefault(void) {
   gap_extending_penalty_ = 1;
   reference_length_      = 0;
 }
+int8_t Aligner::getScore(const char a, const char b){
+  int8_t aint=0;
+  int8_t bint=0;
+auto chartointfk = [&](char a){
+    switch (a)
+    {
+    case 'A':
+      return 0;
+    
+    case 'C':
+      return 1;
+    
+    case 'G':
+      return 2;
+    
+    case 'T':
+      return 3;
 
+    case 'N':
+      return 4;
+
+    default:
+      return 0;
+    }
+};
+  aint=chartointfk(a);
+  bint=chartointfk(b);
+
+  return score_matrix_[(aint*score_matrix_size_) + bint];
+}
 bool Aligner::ReBuild(void) {
   if (translation_matrix_) return false;
 
