@@ -206,7 +206,7 @@ class Aligner {
   void SetAllDefault(void);
   void BuildDefaultMatrix(void);
   void ClearMatrices(void);
-
+int8_t Aligner::getScore(const char a, const char b);
   Aligner& operator= (const Aligner&);
   Aligner (const Aligner&);
 }; // class Aligner
