@@ -884,7 +884,8 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                     if (_query->at(altPos + i) == 'C')
                     { // if its a mismatch
 
-                        if (('T' == _ref->at(refPos + i) && 'A' == aa.targetOriginal_rc.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
+                        if (('T' == _ref->at(refPos + i) && 'A' == aa.targetOriginal_rc.at(refPos + i)) 
+                        || ('A' == _ref->at(refPos + i) && 'T' == aa.targetOriginal_rc.at(refPos + i)))
                         {
 
                            // ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
@@ -894,7 +895,8 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                     if (_query->at(altPos + i) == 'T')
                     { // if its a conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) 
+                        || ('G' == _ref->at(refPos + i) && 'C' == aa.targetOriginal_rc.at(refPos + i)))
                         {
                             _num_conversions++;
 
@@ -986,7 +988,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
 
         //aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
     };
-(//gzugi
+//gzugi
     auto comparefk = [&](auto begin, auto end, int /*threadid*/)
     {
         for (auto i = begin; i < end; i++)
