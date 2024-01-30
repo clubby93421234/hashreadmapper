@@ -23,8 +23,8 @@ namespace care{
     std::string to_string(MapperType s){
         switch (s)
         {
-        case MapperType::primitiveSW:
-            return "primitiv SW";
+        case MapperType::edlib:
+            return "edlib";
         case MapperType::SW:
             return "SW";
         case MapperType::sthelse:
@@ -103,8 +103,8 @@ namespace care{
 
             if(arg == "SW" || arg == "sw"){
                 result.mappType = MapperType::SW;
-            }else if(arg == "PSW" || arg == "psw"){
-                result.mappType = MapperType::primitiveSW;
+            }else if(arg == "ED" || arg == "edlib"){
+                result.mappType = MapperType::edlib;
             }else{
                 result.mappType = MapperType::sthelse;
             }
