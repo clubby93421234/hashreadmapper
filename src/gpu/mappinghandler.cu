@@ -965,7 +965,8 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                     if (_query->at(altPos + i) == 'T')
                     { // if its a possible conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.targetOriginal_rc.at(refPos + i)) ||
+                         ('G' == _ref->at(refPos + i) && 'C' == aa.targetOriginal_rc.at(refPos + i)))
                         {
                             _num_conversions++;
 
