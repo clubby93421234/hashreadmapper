@@ -738,7 +738,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             std::string_view window(genomesequence.data() + result.position, windowlength);
             std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
-            edlibhelper eh;
+            Edlibhelper eh;
             eh.queryLength = readLengths[0];
             eh.queryOriginal = readsequence;
             eh.queryOriginal.resize(readLengths[0]);
@@ -758,10 +758,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             NucleoideConverer(eh.targetOriginal_rc_threen.data(), eh.targetOriginal_rc.c_str(), windowlengthRC);
 
             edlibout.push_back(eh);
-            /*Put your mapping algorithm here
-             *....
-             *use the variables "window" and "readsequence"
-             */
+           
         }
         else
         {
@@ -789,7 +786,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             eh.queryLength = readLengths[0];
             eh.queryOriginal = readsequence;
             eh.flag |= 0x4;
-            mappingout.push_back(eh);
+            edlibout.push_back(eh);
         }
         mappertimer.print();
     }//end of big for loop
@@ -803,21 +800,204 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
     {
        for (auto i = begin; i < end; i++)
         {
-           if ((mappingout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
+           if ((edlibout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
               // 3NQuery-3NREF
-               EdlibAlignResult result = edlibAlign("hello", 5, "world!", 6, edlibDefaultAlignConfig());
+               EdlibAlignResult result = edlibAlign(edlibout.at(i).queryOriginal_threen,
+                                                    edlibout.at(i).queryLength,
+                                                    edlibout.at(i).targetOriginal_threen,
+                                                    edlibout.at(i).targetLength, 
+                                                    edlibDefaultAlignConfig());
                if (result.status == EDLIB_STATUS_OK) {
-                   printf("edit_distance('hello', 'world!') = %d\n", result.editDistance);
+                   edlibout.at(i).cigar.assign(
+                                                edlibAlignmentToCigar(
+                                                    result.alignment, result.alignmentLength, EDLIB_CIGAR_STANDARD)
+                                                );
+                   edlibout.at(i).score = result.editDistance;
                }
                edlibFreeAlignResult(result);
 
                // 3NRC_Query-3NREF
-               
+               EdlibAlignResult resultrc = edlibAlign(edlibout.at(i).queryOriginal_rc_threen,
+                   edlibout.at(i).queryLength,
+                   edlibout.at(i).targetOriginal_rc_threen,
+                   edlibout.at(i).targetLength,
+                   edlibDefaultAlignConfig());
+               if (result.status == EDLIB_STATUS_OK) {
+                   edlibout.at(i).cigar_rc.assign(
+                                            edlibAlignmentToCigar(
+                                                resultrc.alignment, resultrc.alignmentLength, EDLIB_CIGAR_STANDARD)
+                                            );
+                   edlibout.at(i).score_rc = result.editDistance;
+               }
+               edlibFreeAlignResult(resultrc);
+
            }
            else {//ignore unmapped
                continue;
            }
         } 
     }
+    std::size_t start = 0;
+    threadPool.parallelFor(pforHandle, start, mappingout.size(), mapfk);
+    std::cout << "mapped, now to recalculaion of AlignmentScore:...\n";
 
-}
+    auto recalculateAlignmentScorefk = [&](Edlibhelper& aa, const Cigar::Entries& cig, std::size_t h)
+    {
+        StripedSmithWaterman::Alignment* ali = &aa.alignments.at(h);
+        int _num_conversions = 0;
+        std::string* _query = &aa.query;
+        std::string* _ref = &aa.ref;
+
+        if (!h)
+        {
+            _query = &aa.rc_query;
+        }
+
+        int refPos = 0, altPos = 0;
+
+        for (const auto& cigarEntry : cig)
+        {
+
+            auto basesLeft = std::min(82 - std::max(refPos, altPos), cigarEntry.second);
+
+            switch (cigarEntry.first)
+            {
+            case Cigar::Op::Match:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
+                    }
+                    if (_query->at(altPos + i) == 'C')
+                    { // if its a mismatch
+
+                        if (('T' == _ref->at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
+                        {
+
+                            ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
+                            ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
+                        }
+                    }
+                    if (_query->at(altPos + i) == 'T')
+                    { // if its a conversion
+
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        {
+                            _num_conversions++;
+
+                            ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
+                            ali->sw_score += aligner.getScore('T', _ref->at(refPos + i)); // add corrected matching score
+                        }
+                    }
+                }
+
+                refPos += basesLeft;
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::Insert:
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::Delete:
+                refPos += basesLeft;
+                break;
+
+            case Cigar::Op::SoftClip:
+                altPos += basesLeft;
+                break;
+
+            case Cigar::Op::HardClip:
+
+                break;
+
+            case Cigar::Op::Skipped:
+                refPos += basesLeft;
+                break;
+
+            case Cigar::Op::Padding:
+
+                break;
+
+            case Cigar::Op::Mismatch:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
+                    }
+                }
+                refPos += basesLeft;
+                altPos += basesLeft;
+
+                break;
+
+            case Cigar::Op::Equal:
+                for (int i = 0; i < basesLeft; ++i)
+                {
+                    if (
+
+                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                    {
+                        continue;
+                    }
+                    if (_query->at(altPos + i) == 'T')
+                    { // if its a possible conversion
+
+                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        {
+                            _num_conversions++;
+
+                            ali->sw_score -= 2;
+                            ali->sw_score += aligner.getScore(_query->at(altPos + i), _ref->at(refPos + i));
+
+                            //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
+                        }
+                    }
+                }
+                refPos += basesLeft;
+                altPos += basesLeft;
+                break;
+
+            default:
+                std::cout << "this shouldnt print\n";
+                break;
+            }
+        }
+
+        aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
+    };
+
+    auto comparefk = [&](auto begin, auto end, int /*threadid*/)
+    {
+        for (auto i = begin; i < end; i++)
+        {
+            if ((edlibout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
+
+                Cigar cigi{ edlibout.at(i).cigar };
+                Cigar cigii{ edlibout.at(i).cigar_rc };
+
+                recalculateAlignmentScorefk(edlibout.at(i), cigi.getEntries(), 0);
+                recalculateAlignmentScorefk(edlibout.at(i), cigii.getEntries(), 1);
+            }
+            else {//ignore unmapped
+                continue;
+            }
+        }
+    };
+
+    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
+    //std::cout<<"hello\n";
+    printtoSAM();
+}//end of edlib aligner
