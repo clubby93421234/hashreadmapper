@@ -34,7 +34,7 @@
 
 #include <gpu/mappedread.cuh>
 
-#include "edlib.h"
+#include "edlib-master/edlib/include/edlib.h"
 
 /// @brief
 /// @param programOptions_
