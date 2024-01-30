@@ -100,21 +100,29 @@ struct AlignerArguments{
         };
 
         //------------------------------------------------------------------------------
-struct edlibhelper{
-    char* queryOriginal; 
-     char* queryOriginal_threen;
-     char* queryOriginal_rc; 
-     char* queryOriginal_rc_threen; 
+struct Edlibhelper{
+    std::string queryOriginal;
+    std::string queryOriginal_threen;
+    std::string queryOriginal_rc;
+    std::string queryOriginal_rc_threen;
     int queryLength;
 
-    char* targetOriginal;
-     char* targetOriginal_threen;
-     char* targetOriginal_rc;
-     char* targetOriginal_rc_threen;
+    int queryStart;
+    int queryStart_rc;
+
+    std::string targetOriginal;
+    std::string targetOriginal_threen;
+    std::string targetOriginal_rc;
+    std::string targetOriginal_rc_threen;
     int targetLength;    
-    EdlibAlignResult er;
+    
     uint16_t flag = 0;
     uint16_t flag_rc = 0;
+    std::string cigar;
+    std::string cigar_rc;
+
+    int score;
+    int score_rc;
 };
 //-----------------------------------------------------------------------
         void printtoSAM();
@@ -123,9 +131,9 @@ struct edlibhelper{
         void edlibAligner(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
         void examplewrapper(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
         uint32_t mapqfkt(int i, int j);
-        std::vector<AlignerArguments> mappingout;
 
-        std::vector<elibhelper> edlibout;
+        std::vector<AlignerArguments> mappingout;
+        std::vector<Edlibhelper> edlibout;
 };
 
 #endif
