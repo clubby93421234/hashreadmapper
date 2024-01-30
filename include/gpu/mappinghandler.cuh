@@ -34,7 +34,7 @@
 #include "varianthandler.hpp"
 
 #include <gpu/mappedread.cuh>
-#include "edlib-master/edlib/include/edlib.h"
+#include "edlib.h"
 using namespace care;
 
 class Mappinghandler{

@@ -42,7 +42,8 @@ SOURCES_GPU_VERSION = \
 	src/constants.cpp \
 	src/filehandler.cpp	\
 	src/varianthandler.cpp \
-	src/variant.cpp 
+	src/variant.cpp \
+	src/edlib.cpp
 
 #	src/filehandler.cpp 
 #	src/referencehandler.cpp
@@ -124,6 +125,8 @@ $(DIR)/varianthandler.o : src/varianthandler.cpp
 $(DIR)/variant.o : src/variant.cpp
 	$(COMPILE)
 
+$(DIR)/edlib.o : src/edlib.cpp
+	$(COMPILE)
 #$(DIR)/sequencehandler.o : src/sequencehandler.cpp
 #	$(COMPILE)
 #$(DIR)/referencehandler.o : src/referencehandler.cpp
@@ -149,7 +152,8 @@ $(DIR)/sequenceconversionkernels.o : src/gpu/sequenceconversionkernels.cu
 $(DIR)/mappinghandler.o : src/gpu/mappinghandler.cu
 	$(CUDA_COMPILE)
 
-
+$(DIR)/edlib.o : src/edlib.cpp
+	$(COMPILE)
 
 
 

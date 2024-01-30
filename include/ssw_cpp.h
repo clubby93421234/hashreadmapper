@@ -188,7 +188,7 @@ class Aligner {
           const int&    score_matrix_size,
           const int8_t* translation_matrix,
 	  const int&    translation_matrix_size);
-
+int8_t getScore(const char a, const char b);
  private:
   int8_t* score_matrix_;
   int     score_matrix_size_;
@@ -206,7 +206,7 @@ class Aligner {
   void SetAllDefault(void);
   void BuildDefaultMatrix(void);
   void ClearMatrices(void);
-  int8_t getScore(const char a, const char b);
+  
   Aligner& operator= (const Aligner&);
   Aligner (const Aligner&);
 }; // class Aligner

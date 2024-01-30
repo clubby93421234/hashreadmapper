@@ -4,7 +4,7 @@ Cigar::Cigar(const std::string & cigarStr)
 {
     int bases = 0;
     for (const char & c : cigarStr) {
-        if (c >= 'A' && c <= 'Z' || c == '=') {
+        if ((c >= 'A' && c <= 'Z') || c == '=') {
             m_entries.emplace_back(charToOp(c), bases);
             bases = 0;
         }
