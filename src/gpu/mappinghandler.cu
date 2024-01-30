@@ -986,7 +986,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
 
         //aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
     };
-
+(//gzugi
     auto comparefk = [&](auto begin, auto end, int /*threadid*/)
     {
         for (auto i = begin; i < end; i++)
