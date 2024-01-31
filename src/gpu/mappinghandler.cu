@@ -35,6 +35,7 @@
 #include <gpu/mappedread.cuh>
 
 #include "edlib.h"
+#include "mappinghandler.cuh"
 
 /// @brief
 /// @param programOptions_
@@ -275,6 +276,91 @@ auto test = (programOptions->outputfile)+".SAM";
     }
     outputstream.close();
 }
+
+void Mappinghandler::printtoedlibSAM()
+{
+    auto test = (programOptions->outputfile)+".SAM";
+    std::ofstream outputstream(test);
+
+    outputstream << "@HD\n"
+                 << "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
+
+    for (std::size_t i = 0; i < edlibout.size(); i++)
+    {
+
+        std::string samtag = "";
+        uint32_t mapq = 0;
+        int pos = 0;
+        std::string cig = "";
+        uint16_t samflag=0;
+        if (edlibout.at(i).score>= edlibout.at(i).score_rc)
+        {
+            // if(mappingout.at(i).alignments.at(0).sw_score>5)
+            // std::cout<<"1: "<<mappingout.at(i).alignments.at(0).sw_score<<" "<<i<<"\n";
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(edlibout.at(i).num_conversions));
+            samtag.append(">");
+            samtag.append("YZ:A:<+>"); // REF-3N
+            samflag=edlibout.at(i).flag;
+            mapq = mapqfkt(i, 0);
+            pos = edlibout.at(i).result.position + edlibout.at(i).queryStart;
+            cig.append(edlibout.at(i).cigar_rc);
+        }
+        else
+        {
+            // if(edlibout.at(i).alignments.at(1).sw_score>5)
+            // std::cout<<"2: "<<edlibout.at(i).alignments.at(1).sw_score<<" "<<i<<"\n";
+            samtag.append("Yf:i:<");
+            samtag.append(std::to_string(edlibout.at(i).num_conversions_rc));
+            samtag.append(">");
+            samtag.append("YZ:A:<->"); // REF-RC-3N
+            samflag=edlibout.at(i).flag_rc;
+            mapq = mapqfkt(i, 1);
+            pos = edlibout.at(i).result.position + edlibout.at(i).queryStart_rc;
+            cig.append(edlibout.at(i).cigar_rc);
+        }
+        if ((edlibout.at(i).flag & 0x4) == 0) {//check if unmapped bit is not set
+            outputstream << edlibout.at(i).readId << "\t" // QNAME
+                << samflag << "\t"                                                // FLAG
+                << genome->names.at(edlibout.at(i).result.chromosomeId) << "\t" // RNAME
+                << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << mapq << "\t"                                                   // MAPQ
+                << cig << "\t"                                                    // CIGAR
+                << "="
+                << "\t" // RNEXT
+                << ""
+                << "\t" // PNEXT
+                << "0"
+                << "\t"                           // TLEN
+                << edlibout.at(i).queryOriginal << "\t" // SEQ
+                << "*"
+                << "\t"           // QUAL
+                << samtag << "\t" // TAG
+                << "\n";
+        }
+        else {//print unmapped
+            
+            outputstream << edlibout.at(i).readId << "\t" // QNAME
+                << samflag << "\t"                                                // FLAG
+                << genome->names.at(edlibout.at(i).result.chromosomeId) << "\t" // RNAME
+                << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << "\t"                                                   // MAPQ
+                << "\t"                                                    // CIGAR
+                << "="
+                << "\t" // RNEXT
+                << ""
+                << "\t" // PNEXT
+                << "0"
+                << "\t"                           // TLEN
+                << edlibout.at(i).queryOriginal << "\t" // SEQ
+                << "*"
+                << "\t"           // QUAL
+                << ""<< "\t" // TAG
+                << "\n";
+        }
+    }
+    outputstream.close();
+} 
 
 // Complete-Striped-Smith-Waterman Mapper.
 // https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library
@@ -763,7 +849,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             eh.targetOriginal_rc= std::string(windowRC).c_str();
             eh.targetOriginal_rc_threen.resize(windowlengthRC);
             NucleoideConverer(eh.targetOriginal_rc_threen.data(), eh.targetOriginal_rc.c_str(), windowlengthRC);
-
+            eh.result=result;
             edlibout.push_back(eh);
            
         }
@@ -888,7 +974,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
                         || ('A' == _ref->at(refPos + i) && 'T' == aa.targetOriginal_rc.at(refPos + i)))
                         {
 
-                           // ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
+                            //temp_score-= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
                            // ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
                         }
                     }
@@ -987,6 +1073,11 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             }
         }
 
+        if(!h){
+            aa.num_conversions_rc=_num_conversions;
+        }else{
+            aa.num_conversions=_num_conversions;
+        }
         //aa.num_conversions.at(h) = _num_conversions; // update AlignerArguments
     };
 //gzugi
@@ -1010,5 +1101,6 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
 
     threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
     //std::cout<<"hello\n";
-    printtoSAM();
+    //printtoSAM();
+    printtoedlibSAM();
 }//end of edlib aligner

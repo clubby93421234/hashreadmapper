@@ -124,7 +124,7 @@ $(DIR)/varianthandler.o : src/varianthandler.cpp
 	$(COMPILE)
 $(DIR)/variant.o : src/variant.cpp
 	$(COMPILE)
-
+#edlib aligner
 $(DIR)/edlib.o : src/edlib.cpp
 	$(COMPILE)
 #$(DIR)/sequencehandler.o : src/sequencehandler.cpp

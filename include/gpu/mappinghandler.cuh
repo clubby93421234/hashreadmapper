@@ -123,9 +123,15 @@ struct Edlibhelper{
 
     int score;
     int score_rc;
+
+    int num_conversions;
+    int num_conversions_rc;
+
+    MappedRead result;
 };
 //-----------------------------------------------------------------------
         void printtoSAM();
+        void printtoedlibSAM();
         void CSSW(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
 
         void edlibAligner(std::unique_ptr<ChunkedReadStorage>& cpuReadStorage);
