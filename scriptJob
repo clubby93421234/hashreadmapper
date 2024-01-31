@@ -33,5 +33,5 @@ module load system/CUDA/11.6.1
 #
 #nvidia-smi
 #./main-gpu
-srun  ./main-gpu -p -g 0,1,2 --genomefile ../GRCh38.fa -o readsstandard_out -t 48  --mappertype sw -i ../kleiner10mil.fasta 
+srun  ./main-gpu -p -g 0,1,2 --genomefile ../GRCh38.fa -o readsstandard_out -t 48  --mappertype sw -i ../output10milk.fasta 
 #--save-hashtables-to ../reads54milpp
