@@ -35,7 +35,7 @@
 #include <gpu/mappedread.cuh>
 
 #include "edlib.h"
-#include "mappinghandler.cuh"
+
 
 /// @brief
 /// @param programOptions_
