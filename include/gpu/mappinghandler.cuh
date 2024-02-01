@@ -128,6 +128,7 @@ struct Edlibhelper{
     int num_conversions_rc;
 
     MappedRead result;
+    read_number readId;
 };
 //-----------------------------------------------------------------------
         void printtoSAM();
