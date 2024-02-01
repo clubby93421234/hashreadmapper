@@ -13,7 +13,7 @@
 #SBATCH -N 1                     # Total number of nodes requested (48 cores/node per GPU node)
 #SBATCH -n 1                     # Total number of tasks
 #SBATCH -c 48                    # CPUs per task
-#SBATCH -t 01:00:00              # Run time (hh:mm:ss) - 0.5 hours
+#SBATCH -t 00:30:00              # Run time (hh:mm:ss) - 0.5 hours
 #SBATCH --gres=gpu:3             # Reserve 6 GPUs
 
 
