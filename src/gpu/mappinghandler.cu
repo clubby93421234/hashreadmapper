@@ -424,7 +424,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
         if (result.orientation != AlignmentOrientation::None)
         {
-   // std::cout<<"mapped"<<readId<<"\n";
+    std::cout<<"mapped"<<readId<<"\n";
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -541,6 +541,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         
             ali.flag |= 0x4;
             mappingout.push_back(ali);
+            std::cout<<"unmapped"<<readId<<"\n";
         }
 
     } // end of big for loop
