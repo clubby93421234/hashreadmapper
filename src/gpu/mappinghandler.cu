@@ -197,8 +197,18 @@ void Mappinghandler::printtoSAM()
 auto test = (programOptions->outputfile)+".SAM";
     std::ofstream outputstream(test);
 
-    outputstream << "@HD\n"
-                 << "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
+    outputstream << "@HD\tVN:1.4\n";
+    //@SQ lines
+     for (std::size_t i = 0; i < mappingout.size(); i++)
+    {
+        outputstream<<"@SQ"<<"\t"
+                    <<"SN:"<<genome->getSequenceName(mappingout.at(i).readId)
+                    >names.at(mappingout.at(i).result.chromosomeId)<<"\t"
+                    <<"LN:"mappingout.at(i).windowLength
+                    <<"\n";
+    }
+    outputstream<<"@PG\tHashreadmapper\tID:1.0"
+    outputstream<< "@CO: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
 
     for (std::size_t i = 0; i < mappingout.size(); i++)
     {
@@ -282,8 +292,18 @@ void Mappinghandler::printtoedlibSAM()
     auto test = (programOptions->outputfile)+".SAM";
     std::ofstream outputstream(test);
 
-    outputstream << "@HD\n"
-                 << "@Coloums: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
+    outputstream << "@HD\tVN:1.4\n";
+    //@SQ lines
+     for (std::size_t i = 0; i < edlibout.size(); i++)
+    {
+        outputstream<<"@SQ"<<"\t"
+                    <<"SN:"<<genome->getSequenceName(edlibout.at(i).readId)
+                    >names.at(edlibout.at(i).result.chromosomeId)<<"\t"
+                    <<"LN:"edlibout.at(i).targetLength
+                    <<"\n";
+    }
+    outputstream<<"@PG\tHashreadmapper\tID:1.0"
+    outputstream << "@CO: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
 
     for (std::size_t i = 0; i < edlibout.size(); i++)
     {
@@ -326,12 +346,9 @@ void Mappinghandler::printtoedlibSAM()
                 << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
                 << mapq << "\t"                                                   // MAPQ
                 << cig << "\t"                                                    // CIGAR
-                << "="
-                << "\t" // RNEXT
-                << ""
-                << "\t" // PNEXT
-                << "0"
-                << "\t"                           // TLEN
+                << "="                << "\t" // RNEXT
+                << ""               << "\t" // PNEXT
+                << "0"               << "\t"                           // TLEN
                 << edlibout.at(i).queryOriginal << "\t" // SEQ
                 << "*"
                 << "\t"           // QUAL
@@ -343,19 +360,15 @@ void Mappinghandler::printtoedlibSAM()
             outputstream << edlibout.at(i).readId << "\t" // QNAME
                 << samflag << "\t"                                                // FLAG
                 << genome->names.at(edlibout.at(i).result.chromosomeId) << "\t" // RNAME
-                << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
-                << "\t"                                                   // MAPQ
-                << "\t"                                                    // CIGAR
-                << "="
-                << "\t" // RNEXT
-                << ""
-                << "\t" // PNEXT
-                << "0"
-                << "\t"                           // TLEN
+                << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << mapq << "\t"                                                   // MAPQ
+                << cig << "\t"                                                               // CIGAR
+                << "="               << "\t" // RNEXT
+                << ""                << "\t" // PNEXT
+                << "0"               << "\t"                           // TLEN
                 << edlibout.at(i).queryOriginal << "\t" // SEQ
-                << "*"
-                << "\t"           // QUAL
-                << ""<< "\t" // TAG
+                << "*" << "\t"           // QUAL
+                << samtag<< "\t" // TAG
                 << "\n";
         }
     }
