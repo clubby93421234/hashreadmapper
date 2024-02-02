@@ -202,12 +202,11 @@ auto test = (programOptions->outputfile)+".SAM";
      for (std::size_t i = 0; i < mappingout.size(); i++)
     {
         outputstream<<"@SQ"<<"\t"
-                    <<"SN:"<<genome->getSequenceName(mappingout.at(i).readId)
-                    >names.at(mappingout.at(i).result.chromosomeId)<<"\t"
+                    <<"SN:"<<genome->getSequenceName(mappingout.at(i).readId)<<"\t"
                     <<"LN:"mappingout.at(i).windowLength
                     <<"\n";
     }
-    outputstream<<"@PG\tHashreadmapper\tID:1.0"
+    outputstream<<"@PG\tHashreadmapper\tID:1.0";
     outputstream<< "@CO: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
 
     for (std::size_t i = 0; i < mappingout.size(); i++)
@@ -268,9 +267,9 @@ auto test = (programOptions->outputfile)+".SAM";
             outputstream << mappingout.at(i).readId << "\t" // QNAME
                 << samflag << "\t"                                                // FLAG
                 << genome->names.at(mappingout.at(i).result.chromosomeId) << "\t" // RNAME
-                << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
-                << "\t"                                                   // MAPQ
-                << "\t"                                                    // CIGAR
+                << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
+                << mapq << "\t"                                                   // MAPQ
+                << cig << "\t"                                                        // CIGAR
                 << "="
                 << "\t" // RNEXT
                 << ""
@@ -297,12 +296,11 @@ void Mappinghandler::printtoedlibSAM()
      for (std::size_t i = 0; i < edlibout.size(); i++)
     {
         outputstream<<"@SQ"<<"\t"
-                    <<"SN:"<<genome->getSequenceName(edlibout.at(i).readId)
-                    >names.at(edlibout.at(i).result.chromosomeId)<<"\t"
+                    <<"SN:"<<genome->getSequenceName(edlibout.at(i).readId)<<"\t"
                     <<"LN:"edlibout.at(i).targetLength
                     <<"\n";
     }
-    outputstream<<"@PG\tHashreadmapper\tID:1.0"
+    outputstream<<"@PG\tHashreadmapper\tID:1.0";
     outputstream << "@CO: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
 
     for (std::size_t i = 0; i < edlibout.size(); i++)
