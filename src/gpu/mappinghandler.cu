@@ -473,11 +473,11 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
             ali.windowlength = windowlength;
             //        ali.windowlengthRC=windowlengthRC;
-
+        
             mappingout.push_back(ali);
         }
         else
-        {
+        {//read not mapped
             const auto& genomesequence = (*genome).data.at(result.chromosomeId);
             const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -499,8 +499,39 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
             AlignerArguments ali;
+            int32_t maskLen = readLengths[0] / 2;
+            maskLen = maskLen < 15 ? 15 : maskLen;
+
+            AlignerArguments ali;
 
             ali.query = readsequence;
+            ali.three_n_query.resize(readLengths[0]);
+            NucleoideConverer(ali.three_n_query.data(), ali.query.c_str(), readLengths[0]);
+            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
+
+            ali.three_n_rc_query.resize(readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]);
+
+            ali.ref = std::string(window).c_str();
+            ali.three_n_ref.resize(windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.c_str(), windowlength);
+
+            ali.rc_ref = std::string(windowRC).c_str();
+            ali.three_n_rc_ref.resize(windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
+
+            ali.filter = filter;
+
+            ali.maskLen = maskLen;
+            ali.readId = readId;
+            ali.ref_len = windowlength;
+
+            ali.result = result;
+            //                    ali.resultRC=resultRC;
+
+            ali.windowlength = windowlength;
+            //        ali.windowlengthRC=windowlengthRC;
+            //ali.query = readsequence;
             ali.flag |= 0x4;
             mappingout.push_back(ali);
         }
@@ -528,7 +559,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
                     mappingout.at(i).filter,
                     ali,
                     mappingout.at(i).maskLen);
-
+                    
                 // 3NRC_Query-3NREF
                 StripedSmithWaterman::Alignment* alii;
                 alii = &mappingout.at(i).alignments.at(1);
