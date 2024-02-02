@@ -196,7 +196,7 @@ void Mappinghandler::printtoSAM()
 {
 auto test = (programOptions->outputfile)+".SAM";
     std::ofstream outputstream(test);
-    std::count<<"number of reads:"<<mappingout.size()<<"\n";
+    std::cout<<"number of reads:"<<mappingout.size()<<"\n";
     long nootmapped=0;
     long moodmapped=0;
     outputstream << "@HD\tVN:1.4\n";
