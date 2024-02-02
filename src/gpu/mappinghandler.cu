@@ -202,7 +202,7 @@ auto test = (programOptions->outputfile)+".SAM";
      for (std::size_t i = 0; i < mappingout.size(); i++)
     {
         outputstream<<"@SQ"<<"\t"
-                    <<"SN:"<<genome->getSequenceName(mappingout.at(i).readId)<<"\t"
+                    <<"SN:"<<genome->names.at(mappingout.at(i).result.chromosomeId)  <<"\t"
                     <<"LN:"<<mappingout.at(i).windowlength<<"\n";
     }
     outputstream<<"@PG\tHashreadmapper\tID:1.0";
