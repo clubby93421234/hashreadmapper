@@ -418,7 +418,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
         if (result.orientation != AlignmentOrientation::None)
         {
-
+    std::cout<<"mapped"<<readId<<"\n";
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -478,31 +478,33 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         }
         else
         {//read not mapped
-            const auto& genomesequence = (*genome).data.at(result.chromosomeId);
-            const auto& genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
+        std::cout<<"notmapped"<<readId<<"\n";
+            const auto &genomesequence = (*genome).data.at(result.chromosomeId);
+            const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
             const std::size_t windowlength = result.position +
-                programOptions->windowSize <
-                genomesequence.size()
-                ? programOptions->windowSize
-                : genomesequence.size() -
-                result.position;
+                                                         programOptions->windowSize <
+                                                     genomesequence.size()
+                                                 ? programOptions->windowSize
+                                                 : genomesequence.size() -
+                                                       result.position;
             const std::size_t windowlengthRC = result.position +
-                programOptions->windowSize <
-                genomesequenceRC.size()
-                ? programOptions->windowSize
-                : genomesequenceRC.size() -
-                result.position;
+                                                           programOptions->windowSize <
+                                                       genomesequenceRC.size()
+                                                   ? programOptions->windowSize
+                                                   : genomesequenceRC.size() -
+                                                         result.position;
 
             std::size_t aef = genomesequenceRC.size() - result.position - 1;
             std::string_view window(genomesequence.data() + result.position, windowlength);
             std::string_view windowRC(genomesequenceRC.data() + aef, windowlengthRC);
 
-            AlignerArguments ali;
+            processedResults++;
+
             int32_t maskLen = readLengths[0] / 2;
             maskLen = maskLen < 15 ? 15 : maskLen;
 
-           
+            AlignerArguments ali;
 
             ali.query = readsequence;
             ali.three_n_query.resize(readLengths[0]);
@@ -531,7 +533,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
             ali.windowlength = windowlength;
             //        ali.windowlengthRC=windowlengthRC;
-            //ali.query = readsequence;
+        
             ali.flag |= 0x4;
             mappingout.push_back(ali);
         }
