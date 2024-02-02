@@ -203,7 +203,7 @@ auto test = (programOptions->outputfile)+".SAM";
     {
         outputstream<<"@SQ"<<"\t"
                     <<"SN:"<<genome->getSequenceName(mappingout.at(i).readId)<<"\t"
-                    <<"LN:"<<mappingout.at(i).windowLength<<"\n";
+                    <<"LN:"<<mappingout.at(i).windowlength<<"\n";
     }
     outputstream<<"@PG\tHashreadmapper\tID:1.0";
     outputstream<< "@CO: QNAME\tFLAG\tRNAME\tPOS\tMAPQ\tCIGAR\tRNEXT\tPNEXT\tTLEN\tSEQ\tQUAL\tTAG\n";
