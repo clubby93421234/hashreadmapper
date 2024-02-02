@@ -502,7 +502,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             int32_t maskLen = readLengths[0] / 2;
             maskLen = maskLen < 15 ? 15 : maskLen;
 
-            AlignerArguments ali;
+           
 
             ali.query = readsequence;
             ali.three_n_query.resize(readLengths[0]);
