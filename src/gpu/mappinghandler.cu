@@ -385,7 +385,8 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
     StripedSmithWaterman::Aligner aligner;
     StripedSmithWaterman::Filter filter;
-
+long nootmapped = 0;
+    long moodmapped = 0;
     const int maximumSequenceLength = cpuReadStorage->getSequenceLengthUpperBound();
 
     std::size_t numreads = cpuReadStorage->getNumberOfReads();
@@ -426,6 +427,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         if (result.orientation != AlignmentOrientation::None)
         {
         // std::cout<<"mapped"<<readId<<"\n";
+moodmapped++;
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -485,6 +487,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         }
         else
         {//read not mapped
+nootmapped++;
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -747,11 +750,13 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
     };
 
     threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
-//std::cout<<"hello\n";
-helpers::CpuTimer sammapping("process sam file writing");
-    printtoSAM();
-    sammapping.print();
-//std::cout<<"byby\n";
+
+    std::cout << "number of reads:" << mappingout.size() << "\n";
+    std::cout << "mapped: " << moodmapped << "\n";
+    std::cout << "not mapped: " << nootmapped << "\n";
+//helpers::CpuTimer sammapping("process sam file writing");
+  //  printtoSAM();
+   // sammapping.print();
 } // end of CSSW-Mapping
 
 void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
