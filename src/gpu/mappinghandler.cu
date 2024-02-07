@@ -75,7 +75,7 @@ void Mappinghandler::go(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage_)
          edlibAligner(cpuReadStorage_);
         break;
     case MapperType::SW:
-        // std::cout<<"SW selected \n";
+        // std::cout<<"SSW selected \n";
         CSSW(cpuReadStorage_);
         break;
     case MapperType::sthelse:
@@ -178,11 +178,12 @@ void Mappinghandler::NucleoideConverer(char *output, const char *input, int leng
         assert("Nucleotide Converter Failed");
 }
 
-uint32_t Mappinghandler::mapqfkt(int i, int j)
-{
-    // MAPQ calculated as in CSSW
+ // MAPQ calculated as in CSSW
     // https://github.com/mengyao/Complete-Striped-Smith-Waterman-Library/blob/master/src/main.c
     // Line 167 to  169
+uint32_t Mappinghandler::mapqfkt(int i, int j)
+{
+   
     uint32_t _mapq = -4.343 * log(1 - (double)abs(mappingout.at(i).alignments.at(j).sw_score -
                                                   mappingout.at(i).alignments.at(j).sw_score_next_best) /
                                           (double)mappingout.at(i).alignments.at(j).sw_score);
@@ -204,7 +205,7 @@ auto test = (programOptions->outputfile)+".SAM";
      for (std::size_t i = 0; i < mappingout.size(); i++)
     {
         outputstream<<"@SQ"<<"\t"
-                    <<"SN:"<<genome->names.at(mappingout.at(i).result.chromosomeId)  <<"\t"
+                    <<"SN:"<<mappingout.at(i).readId  <<"\t"
                     <<"LN:"<<mappingout.at(i).windowlength<<"\n";
     }
     outputstream<<"@PG\tHashreadmapper\tID:1.0";
@@ -389,7 +390,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
     std::size_t numreads = cpuReadStorage->getNumberOfReads();
 
-   // std::cout << "lets go bigfor:...\n";
+    std::cout << "lets go bigfor:...\n";
 
     std::size_t processedResults = 0;
     for (std::size_t r = 0; r < numreads; r++)
@@ -414,7 +415,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
             encodedReadNumInts2Bit,
             &readId,
             1);
-//std::cout<<"vor if reversecomplemen\n";
+        //std::cout<<"vor if reversecomplemen\n";
         if (result.orientation == AlignmentOrientation::ReverseComplement)
         {
             SequenceHelpers::reverseComplementSequenceInplace2Bit(encodedReads.data(), readLengths[0]);
@@ -424,7 +425,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
         if (result.orientation != AlignmentOrientation::None)
         {
-   // std::cout<<"mapped"<<readId<<"\n";
+        // std::cout<<"mapped"<<readId<<"\n";
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -541,7 +542,7 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
         
             ali.flag |= 0x4;
             mappingout.push_back(ali);
-   //         std::cout<<"unmapped"<<readId<<"\n";
+           // std::cout<<"unmapped"<<readId<<"\n";
         }
 
     } // end of big for loop
@@ -747,7 +748,9 @@ void Mappinghandler::CSSW(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
 
     threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
 //std::cout<<"hello\n";
+helpers::CpuTimer sammapping("process sam file writing");
     printtoSAM();
+    sammapping.print();
 //std::cout<<"byby\n";
 } // end of CSSW-Mapping
 
