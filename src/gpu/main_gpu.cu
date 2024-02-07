@@ -1179,7 +1179,7 @@ ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threa
 
                     
                 }
-                std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
+                //std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
         };
         
        
