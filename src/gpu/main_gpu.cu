@@ -1118,40 +1118,6 @@ ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threa
                             processedWindowCount += batch.numWindows;
                             processedWindowCountProgress += batch.numWindows;
                             if(programOptions.showProgress){
-
-
-
-                                
-                                int deviceCount;
-    cudaGetDeviceCount(&deviceCount);
-
-    if (deviceCount == 0) {
-        std::cerr << "No CUDA devices found!" << std::endl;
-        return 1;
-    }
-
-    for (int device = 0; device < deviceCount; ++device) {
-        cudaSetDevice(device);
-
-        size_t freeMem, totalMem;
-        cudaError_t cudaStatus = cudaMemGetInfo(&freeMem, &totalMem);
-        if (cudaStatus != cudaSuccess) {
-            std::cerr << "cudaMemGetInfo failed for device " << device << "! Error: " << cudaGetErrorString(cudaStatus) << std::endl;
-            return 1;
-        }
-
-        std::cout << "Device " << device << " - Free GPU Memory: " << freeMem / (1024.0 * 1024.0) << " MB\n";
-        std::cout << "Device " << device << " - Total GPU Memory: " << totalMem / (1024.0 * 1024.0) << " MB\n";
-    }
-
-
-
-
-
-        
-
-
-
                                 if(processedWindowCountProgress >= 100000){
                                     std::cout << "processed " << processedWindowCount << " / " << totalWindowCount << "\n";
                                     processedWindowCountProgress -= 100000;
