@@ -143,7 +143,7 @@ std::string_view prefix = refView.substr(0, mappingout.at(i).alignments.at(0).qu
 
             vhandler.call(
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, // seq position
-                prefix,
+                std::string(prefix).c_str(),
                 std::string(mappingout.at(i).ref).c_str(),
                std::string(mappingout.at(i).query).c_str(),
                 marlboro.getEntries(),
@@ -624,31 +624,33 @@ moodmapped++;
                 {
                     if (
 
-                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
-                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                        _query.at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        || _ref.at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query.at(altPos + i) == WILDCARD_NUCLEOTIDE)
                     {
                         continue;
                     }
-                    if (_query->at(altPos + i) == 'C')
+                    if (_query.at(altPos + i) == 'C')
                     { // if its a mismatch
 
-                        if (('T' == _ref->at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) || ('A' == _ref->at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
+                        if (('T' == _ref.at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) 
+                        || ('A' == _ref.at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
                         {
 
-                            ali->sw_score -= aligner.getScore('T', _ref->at(refPos + i)); // substract false matching score
-                            ali->sw_score += aligner.getScore('C', _ref->at(refPos + i)); // add corrected matching score
+                            ali->sw_score -= aligner.getScore('T', _ref.at(refPos + i)); // substract false matching score
+                            ali->sw_score += aligner.getScore('C', _ref.at(refPos + i)); // add corrected matching score
                         }
                     }
                     if (_query->at(altPos + i) == 'T')
                     { // if its a conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref.at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) 
+                        || ('G' == _ref.at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
 
                             ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
-                            ali->sw_score += aligner.getScore('T', _ref->at(refPos + i)); // add corrected matching score
+                            ali->sw_score += aligner.getScore('T', _ref.at(refPos + i)); // add corrected matching score
                         }
                     }
                 }
@@ -686,9 +688,9 @@ moodmapped++;
                 {
                     if (
 
-                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
-                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                        _query.at(altPos + i) == _ref.at(refPos + i) // matching query and ref
+                        || _ref.at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query.at(altPos + i) == WILDCARD_NUCLEOTIDE)
                     {
                         continue;
                     }
@@ -703,21 +705,23 @@ moodmapped++;
                 {
                     if (
 
-                        _query->at(altPos + i) == _ref->at(refPos + i) // matching query and ref
-                        || _ref->at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
-                        || _query->at(altPos + i) == WILDCARD_NUCLEOTIDE)
+                        _query.at(altPos + i) == _ref.at(refPos + i) // matching query and ref
+                        || _ref.at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
+                        || _query.at(altPos + i) == WILDCARD_NUCLEOTIDE)
                     {
                         continue;
                     }
                     if (_query->at(altPos + i) == 'T')
                     { // if its a possible conversion
 
-                        if (('C' == _ref->at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) || ('G' == _ref->at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
+                        if (('C' == _ref.at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) 
+                        || ('G' == _ref.at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
 
                             ali->sw_score -= 2;
-                            ali->sw_score += aligner.getScore(_query->at(altPos + i), _ref->at(refPos + i));
+                            ali->sw_score += aligner.getScore(_query.at(altPos + i),
+                             _ref.at(refPos + i));
 
                             //                 std::cout<<"="<<_query->at(altPos + i)<<_ref->at(refPos + i)<<aa.rc_ref.at(refPos + i)<<"\n";
                         }
