@@ -135,8 +135,11 @@ std::string_view prefix = refView.substr(0, mappingout.at(i).alignments.at(0).qu
                 continue;
             }
             Cigar marlboro{mappingout.at(i).alignments.at(1).cigar_string};
+            
+            std::string_view refView = mappingout.at(i).ref;
+            std::string_view prefix = refView.substr(0, mappingout.at(i).alignments.at(1).query_begin);
 
-            std::string prefix = mappingout.at(i).ref.substr(0, mappingout.at(i).alignments.at(1).query_begin);
+            //std::string prefix = mappingout.at(i).ref.substr(0, mappingout.at(i).alignments.at(1).query_begin);
 
             vhandler.call(
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, // seq position
@@ -514,23 +517,24 @@ moodmapped++;
             int32_t maskLen = readLengths[0] / 2;
             maskLen = maskLen < 15 ? 15 : maskLen;
 
-            AlignerArguments ali;
-
-            ali.query = readsequence;
+           AlignerArguments ali;
+   
+            ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
             NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
-            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
-
+            ali.rc_query = std::string_view(
+                        SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
+                        );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data(), readLengths[0]);
 
-            ali.ref = std::string(window).c_str();
+            ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.c_str(), windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data(), windowlength);
 
-            ali.rc_ref = std::string(windowRC).c_str();
+            ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data(), windowlengthRC);
 
             ali.filter = filter;
 
@@ -598,12 +602,12 @@ moodmapped++;
     {
         StripedSmithWaterman::Alignment *ali = &aa.alignments.at(h);
         int _num_conversions = 0;
-        std::string *_query = &aa.query;
-        std::string *_ref = &aa.ref;
+        std::string_view _query = aa.query;
+        std::string_view _ref = aa.ref;
 
         if (!h)
         {
-            _query = &aa.rc_query;
+            _query = aa.rc_query;
         }
 
         int refPos = 0, altPos = 0;
