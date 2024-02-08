@@ -112,13 +112,13 @@ void Mappinghandler::doVC()
             }
 
             Cigar marlboro{mappingout.at(i).alignments.at(0).cigar_string};
-
-            std::string prefix = mappingout.at(i).ref.substr(0, mappingout.at(i).alignments.at(0).query_begin);
+std::string_view refView = mappingout.at(i).ref;
+std::string_view prefix = refView.substr(0, mappingout.at(i).alignments.at(0).query_begin);
 
             vhandler.call(
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, // seq position
-                prefix,
-                mappingout.at(i).ref,
+                std::string(prefix).c_str(),
+                std::string(mappingout.at(i).ref).c_str(),
                 std::string(mappingout.at(i).query).c_str(),
                 marlboro.getEntries(),
                 genome->names.at(mappingout.at(i).result.chromosomeId),
@@ -141,7 +141,7 @@ void Mappinghandler::doVC()
             vhandler.call(
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, // seq position
                 prefix,
-                mappingout.at(i).ref,
+                std::string(mappingout.at(i).ref).c_str(),
                std::string(mappingout.at(i).query).c_str(),
                 marlboro.getEntries(),
                 genome->names.at(mappingout.at(i).result.chromosomeId),
