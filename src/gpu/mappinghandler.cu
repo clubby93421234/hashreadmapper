@@ -262,7 +262,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << "\t" // PNEXT
                 << "0"
                 << "\t"                           // TLEN
-                << mappingout.at(i).query << "\t" // SEQ
+                << std::string(mappingout.at(i).query) << "\t" // SEQ
                 << "*"
                 << "\t"           // QUAL
                 << samtag << "\t" // TAG
@@ -282,7 +282,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << "\t" // PNEXT
                 << "0"
                 << "\t"                           // TLEN
-                << mappingout.at(i).query << "\t" // SEQ
+                << std::string(mappingout.at(i).query) << "\t" // SEQ
                 << "*"
                 << "\t"           // QUAL
                 << mappingout.at(i).flag << "\t" // TAG
@@ -764,7 +764,7 @@ moodmapped++;
     std::cout << "mapped: " << moodmapped << "\n";
     std::cout << "not mapped: " << nootmapped << "\n";
 //helpers::CpuTimer sammapping("process sam file writing");
-  //  printtoSAM();
+    printtoSAM();
    // sammapping.print();
 } // end of CSSW-Mapping
 
