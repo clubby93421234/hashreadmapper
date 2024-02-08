@@ -69,12 +69,12 @@ struct AlignerArguments{
     uint16_t flag_rc=0;           
            std::string_view query;
             std::string three_n_query;   //3 nucleotide query
-          std::string rc_query;
+          std::string_view rc_query;
             std::string three_n_rc_query;
 
-         std::string ref;//the window of the reference genome
+         std::string_view ref;//the window of the reference genome
             std::string three_n_ref;
-         std::string rc_ref; //the window of the reference genomeRC
+         std::string_view rc_ref; //the window of the reference genomeRC
             std::string three_n_rc_ref;
 
         

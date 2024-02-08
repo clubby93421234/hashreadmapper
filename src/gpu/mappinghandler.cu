@@ -119,7 +119,7 @@ void Mappinghandler::doVC()
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(0).query_begin, // seq position
                 prefix,
                 mappingout.at(i).ref,
-                mappingout.at(i).query,
+                std::string(mappingout.at(i).query).c_str(),
                 marlboro.getEntries(),
                 genome->names.at(mappingout.at(i).result.chromosomeId),
                 mappingout.at(i).readId,
@@ -142,7 +142,7 @@ void Mappinghandler::doVC()
                 mappingout.at(i).result.position + mappingout.at(i).alignments.at(1).query_begin, // seq position
                 prefix,
                 mappingout.at(i).ref,
-                mappingout.at(i).query,
+               std::string(mappingout.at(i).query).c_str(),
                 marlboro.getEntries(),
                 genome->names.at(mappingout.at(i).result.chromosomeId),
                 mappingout.at(i).readId,
@@ -458,22 +458,19 @@ moodmapped++;
             ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
             NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
-            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(
-               ali.query.data()
-                , readLengths[0]);
-
-            //ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
-
+            ali.rc_query = std::string_view(
+                        SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
+                        );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data(), readLengths[0]);
 
-            ali.ref = std::string(window).c_str();
+            ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.c_str(), windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data(), windowlength);
 
-            ali.rc_ref = std::string(windowRC).c_str();
+            ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.c_str(), windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data(), windowlengthRC);
 
             ali.filter = filter;
 
@@ -491,7 +488,7 @@ moodmapped++;
         }
         else
         {//read not mapped
-nootmapped++;
+            nootmapped++;
             const auto &genomesequence = (*genome).data.at(result.chromosomeId);
             const auto &genomesequenceRC = (*genomeRC).data.at(result.chromosomeId);
 
@@ -1003,7 +1000,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
        // int temp_score=aa.score;
         if (!h)
         {
-            temp_score=aa.score_rc;
+           // temp_score=aa.score_rc;
             _query = &aa.queryOriginal_rc;
         }
 
