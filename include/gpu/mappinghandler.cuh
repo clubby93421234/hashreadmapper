@@ -67,7 +67,7 @@ class Mappinghandler{
 struct AlignerArguments{
     uint16_t flag=0;
     uint16_t flag_rc=0;           
-           std::string query;
+           std::string_view query;
             std::string three_n_query;   //3 nucleotide query
           std::string rc_query;
             std::string three_n_rc_query;

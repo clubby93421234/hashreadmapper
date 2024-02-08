@@ -454,11 +454,15 @@ moodmapped++;
             maskLen = maskLen < 15 ? 15 : maskLen;
 
             AlignerArguments ali;
-
-            ali.query = readsequence;
+   
+   ali.query{readsequence,readLengths[0]};
             ali.three_n_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_query.data(), ali.query.c_str(), readLengths[0]);
-            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
+            NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
+            ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(
+               ali.query.data()
+                , readLengths[0]);
+
+            //ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0]);
 
             ali.three_n_rc_query.resize(readLengths[0]);
             NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.c_str(), readLengths[0]);
