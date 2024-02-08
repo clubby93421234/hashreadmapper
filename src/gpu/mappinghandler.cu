@@ -624,7 +624,7 @@ moodmapped++;
                 {
                     if (
 
-                        _query.at(altPos + i) == _ref->at(refPos + i) // matching query and ref
+                        _query.at(altPos + i) == _ref.at(refPos + i) // matching query and ref
                         || _ref.at(refPos + i) == WILDCARD_NUCLEOTIDE // or its N
                         || _query.at(altPos + i) == WILDCARD_NUCLEOTIDE)
                     {
@@ -641,7 +641,7 @@ moodmapped++;
                             ali->sw_score += aligner.getScore('C', _ref.at(refPos + i)); // add corrected matching score
                         }
                     }
-                    if (_query->at(altPos + i) == 'T')
+                    if (_query.at(altPos + i) == 'T')
                     { // if its a conversion
 
                         if (('C' == _ref.at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) 
@@ -711,7 +711,7 @@ moodmapped++;
                     {
                         continue;
                     }
-                    if (_query->at(altPos + i) == 'T')
+                    if (_query.at(altPos + i) == 'T')
                     { // if its a possible conversion
 
                         if (('C' == _ref.at(refPos + i) && 'G' == aa.rc_ref.at(refPos + i)) 
