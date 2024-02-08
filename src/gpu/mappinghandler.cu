@@ -455,7 +455,7 @@ moodmapped++;
 
             AlignerArguments ali;
    
-   ali.query(readsequence);
+            ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
             NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
             ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(
