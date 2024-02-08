@@ -455,7 +455,7 @@ moodmapped++;
 
             AlignerArguments ali;
    
-   ali.query{readsequence};
+   ali.query(readsequence);
             ali.three_n_query.resize(readLengths[0]);
             NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
             ali.rc_query = SequenceHelpers::reverseComplementSequenceDecoded(
@@ -1000,7 +1000,7 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
         int _num_conversions = 0;
         std::string* _query = &aa.queryOriginal;
         std::string* _ref = &aa.targetOriginal;
-        int temp_score=aa.score;
+       // int temp_score=aa.score;
         if (!h)
         {
             temp_score=aa.score_rc;
