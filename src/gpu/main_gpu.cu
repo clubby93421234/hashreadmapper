@@ -1093,12 +1093,6 @@ void performMappingGpu(const ProgramOptions& programOptions){
     //results for rc 3n genome
    // std::vector<MappedRead> resultsRC(multiGpuReadStorage.getNumberOfReads());
 
-ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threads as intended. -->  Back to single threaded
-       ThreadPool::ParallelForHandle pforHandle;
-       
-        auto mapfk=[&](auto begin, auto end, int /*threadid*/){
-           // std::cout<<"i am doing my job!\n";
-                for(auto i=begin; i< end; i++){
                 std::size_t processedWindowCount = 0;
                 std::size_t processedWindowCountProgress = 0;
 
@@ -1125,33 +1119,24 @@ ThreadPool threadPool(programOptions.threads);//out of VRAM if i use the 2 threa
                             }       
                     };
 
-                if(i){
-       // genomeRC.forEachBatchOfWindows(
-       //     programOptions.kmerlength,
-       //     programOptions.windowSize,
-        //    programOptions.batchsize,
-       //     processWithProgress
-       // );
-                }
-                else{
+                
         genome.forEachBatchOfWindows(
             programOptions.kmerlength,
             programOptions.windowSize,
             programOptions.batchsize,
             processWithProgress
         );
-            }
+               
+                
 
 
-                    
-                }
-                //std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
-        };
+                std::cout << "processed " << totalWindowCount << " / " << totalWindowCount << " windows.\n";
+      
         
        
         std::size_t start=0;
         std::size_t end=2;
-        threadPool.parallelFor(pforHandle, start , end ,mapfk);
+       
    
     timerprocessgenome.print();
     std::cout<<"STEP 2: Mapping: \n";
