@@ -168,6 +168,7 @@ void Mappinghandler::NucleoideConverer(char* output, std::string_view input) {
                     output[i] = 'T';
                     break;
                 default:
+                    output[i] = input[i];  // Copy unchanged characters
                     break;
             }
         }
