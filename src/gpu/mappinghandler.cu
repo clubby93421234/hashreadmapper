@@ -528,8 +528,7 @@ moodmapped++;
             ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
             NucleoideConverer(ali.three_n_ref.data(), ali.ref);
-       std::cout << std::string(ali.ref) << "\n";
-std::cout << std::string(ali.three_n_ref) << "\n";
+      
             ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
             NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref);
