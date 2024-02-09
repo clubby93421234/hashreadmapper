@@ -455,20 +455,20 @@ moodmapped++;
    
             ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_query.data(), ali.query.data());
+            NucleoideConverer(ali.three_n_query.data(), ali.query);
             ali.rc_query = std::string_view(
                         SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
                         );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data());
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query);
 
             ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data());
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref);
 
             ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data());
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref);
 
             ali.filter = filter;
 
@@ -516,20 +516,20 @@ moodmapped++;
    
             ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_query.data(), ali.query.data());
+            NucleoideConverer(ali.three_n_query.data(), ali.query);
             ali.rc_query = std::string_view(
                         SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
                         );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data());
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query);
 
             ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data());
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref);
 
             ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data());
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref);
 
             ali.filter = filter;
 
@@ -903,7 +903,8 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             eh.queryOriginal = readsequence;
             eh.queryOriginal.resize(readLengths[0]);
             NucleoideConverer(eh.queryOriginal_threen.data(), eh.queryOriginal.c_str());
-            eh.queryOriginal_rc = SequenceHelpers::reverseComplementSequenceDecoded(eh.queryOriginal.data(), readLengths[0]);
+            eh.queryOriginal_rc = SequenceHelpers::reverseComplementSequenceDecoded(
+                eh.queryOriginal.data(), readLengths[0]);
 
             eh.queryOriginal_rc_threen.resize(readLengths[0]);
             NucleoideConverer(eh.queryOriginal_rc_threen.data(), eh.queryOriginal_rc.c_str());
