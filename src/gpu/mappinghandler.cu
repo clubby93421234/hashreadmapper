@@ -160,25 +160,20 @@ INLINEQUALIFIER
 /// @param output
 /// @param input
 /// @param length
-void Mappinghandler::NucleoideConverer(char *output, const char *input, int length)
-{
-    if (strlen(input) != 0)
-    {
-
-        for (int i = 0; i < length; ++i)
-        {
-            switch (input[i])
-            {
-            case 'C':
-                output[i] = 'T';
-                break;
-            default:
-                break;
+void Mappinghandler::NucleoideConverer(char* output, std::string_view input) {
+    if (!input.empty()) {
+        for (size_t i = 0; i < input.size(); ++i) {
+            switch (input[i]) {
+                case 'C':
+                    output[i] = 'T';
+                    break;
+                default:
+                    break;
             }
         }
+    } else {
+        assert(false && "Nucleotide Converter Failed");
     }
-    else
-        assert("Nucleotide Converter Failed");
 }
 
  // MAPQ calculated as in CSSW
