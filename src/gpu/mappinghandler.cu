@@ -171,6 +171,7 @@ void Mappinghandler::NucleoideConverer(char* output, std::string_view input) {
                     break;
             }
         }
+        output[input.size()] = '\0';  // Null-terminate the string
     } else {
         assert(false && "Nucleotide Converter Failed");
     }
