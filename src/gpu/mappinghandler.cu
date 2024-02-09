@@ -486,7 +486,7 @@ moodmapped++;
 
             ali.windowlength = windowlength;
             //        ali.windowlengthRC=windowlengthRC;
-        
+        std::cout<<"mapped: "<<ali.ref<<"\n";
             mappingout.push_back(ali);
         }
         else
@@ -550,7 +550,7 @@ moodmapped++;
         
             ali.flag |= 0x4;
             mappingout.push_back(ali);
-           // std::cout<<"unmapped"<<readId<<"\n";
+            std::cout<<"unmapped: "<<ali.ref<<"\n";
         }
 
     } // end of big for loop
