@@ -486,7 +486,7 @@ moodmapped++;
 
             ali.windowlength = windowlength;
             //        ali.windowlengthRC=windowlengthRC;
-        std::cout<<"mapped: "<<ali.ref<<"\n";
+        //std::cout<<"mapped: "<<ali.ref<<"\n";
             mappingout.push_back(ali);
         }
         else
@@ -550,13 +550,12 @@ moodmapped++;
         
             ali.flag |= 0x4;
             mappingout.push_back(ali);
-            std::cout<<"unmapped: "<<ali.ref<<"\n";
+        //    std::cout<<"unmapped: "<<ali.ref<<"\n";
         }
 
     } // end of big for loop
 
     std::cout << "big for done, now to mapping:...\n";
-    mappingout.size();
     ThreadPool threadPool(std::max(1, programOptions->threads));
     ThreadPool::ParallelForHandle pforHandle;
 
@@ -565,6 +564,7 @@ moodmapped++;
     {
         for (auto i = begin; i < end; i++)
         {
+            
             if ((mappingout.at(i).flag & 0x4) == 0) {//if unmapped bit is not set --> align it
                 // 3NQuery-3NREF
                 StripedSmithWaterman::Alignment* ali;
@@ -597,7 +597,10 @@ moodmapped++;
     std::size_t start = 0;
     threadPool.parallelFor(pforHandle, start, mappingout.size(), mapfk);
     std::cout << "mapped, now to recalculaion of AlignmentScore:...\n";
-
+std::cout<<mappingout.back().ref<<"\n";
+std::cout<<mappingout.back().rc_ref<<"\n";
+std::cout<<mappingout.back().three_n_ref<<"\n";
+std::cout<<mappingout.back().three_n_rc_ref<<"\n";
     auto recalculateAlignmentScorefk = [&](AlignerArguments &aa, const Cigar::Entries &cig, std::size_t h)
     {
         StripedSmithWaterman::Alignment *ali = &aa.alignments.at(h);
@@ -838,8 +841,7 @@ void Mappinghandler::examplewrapper(std::unique_ptr<ChunkedReadStorage> &cpuRead
     }
 }
 
-void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage)
-{
+void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadStorage){
 
     std::ofstream outputstream("examplemapper_out.txt");
 
