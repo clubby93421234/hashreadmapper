@@ -256,7 +256,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
                 << mapq << "\t"                                                   // MAPQ
                 << cig << "\t"                                                    // CIGAR
-                << "="
+                << mappingout.at(i).ref
                 << "\t" // RNEXT
                 << ""
                 << "\t" // PNEXT
@@ -276,7 +276,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << pos << "\t"                                                    // POS //look up my shenanigans in ssw_cpp.cpp for why its queri_begin
                 << mapq << "\t"                                                   // MAPQ
                 << cig << "\t"                                                        // CIGAR
-                << "="
+                << mappingout.at(i).ref
                 << "\t" // RNEXT
                 << ""
                 << "\t" // PNEXT
