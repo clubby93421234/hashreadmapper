@@ -758,7 +758,7 @@ moodmapped++;
         }
     };
 
-    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
+//    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
 
     std::cout << "number of reads:" << mappingout.size() << "\n";
     std::cout << "mapped: " << moodmapped << "\n";
