@@ -902,20 +902,20 @@ void Mappinghandler::edlibAligner(std::unique_ptr<ChunkedReadStorage> &cpuReadSt
             eh.queryLength = readLengths[0];
             eh.queryOriginal = readsequence;
             eh.queryOriginal.resize(readLengths[0]);
-            NucleoideConverer(eh.queryOriginal_threen.data(), eh.queryOriginal.c_str(), readLengths[0]);
+            NucleoideConverer(eh.queryOriginal_threen.data(), eh.queryOriginal.c_str());
             eh.queryOriginal_rc = SequenceHelpers::reverseComplementSequenceDecoded(eh.queryOriginal.data(), readLengths[0]);
 
             eh.queryOriginal_rc_threen.resize(readLengths[0]);
-            NucleoideConverer(eh.queryOriginal_rc_threen.data(), eh.queryOriginal_rc.c_str(), readLengths[0]);
+            NucleoideConverer(eh.queryOriginal_rc_threen.data(), eh.queryOriginal_rc.c_str());
 
             eh.targetLength=windowlength;
             eh.targetOriginal = std::string(window).c_str();
             eh.targetOriginal_threen.resize(windowlength);
-            NucleoideConverer(eh.targetOriginal_threen.data(), eh.targetOriginal.c_str(), windowlength);
+            NucleoideConverer(eh.targetOriginal_threen.data(), eh.targetOriginal.c_str());
 
             eh.targetOriginal_rc= std::string(windowRC).c_str();
             eh.targetOriginal_rc_threen.resize(windowlengthRC);
-            NucleoideConverer(eh.targetOriginal_rc_threen.data(), eh.targetOriginal_rc.c_str(), windowlengthRC);
+            NucleoideConverer(eh.targetOriginal_rc_threen.data(), eh.targetOriginal_rc.c_str());
             eh.result=result;
             edlibout.push_back(eh);
            
