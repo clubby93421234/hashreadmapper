@@ -455,20 +455,20 @@ moodmapped++;
    
             ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
+            NucleoideConverer(ali.three_n_query.data(), ali.query.data());
             ali.rc_query = std::string_view(
                         SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
                         );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data(), readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data());
 
             ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data(), windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data());
 
             ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data(), windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data());
 
             ali.filter = filter;
 
@@ -516,20 +516,20 @@ moodmapped++;
    
             ali.query = std::string_view(readsequence);
             ali.three_n_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_query.data(), ali.query.data(), readLengths[0]);
+            NucleoideConverer(ali.three_n_query.data(), ali.query.data());
             ali.rc_query = std::string_view(
                         SequenceHelpers::reverseComplementSequenceDecoded(ali.query.data(), readLengths[0])
                         );
             ali.three_n_rc_query.resize(readLengths[0]);
-            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data(), readLengths[0]);
+            NucleoideConverer(ali.three_n_rc_query.data(), ali.rc_query.data());
 
             ali.ref = std::string_view(window);
             ali.three_n_ref.resize(windowlength);
-            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data(), windowlength);
+            NucleoideConverer(ali.three_n_ref.data(), ali.ref.data());
 
             ali.rc_ref = std::string_view(windowRC);
             ali.three_n_rc_ref.resize(windowlengthRC);
-            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data(), windowlengthRC);
+            NucleoideConverer(ali.three_n_rc_ref.data(), ali.rc_ref.data());
 
             ali.filter = filter;
 

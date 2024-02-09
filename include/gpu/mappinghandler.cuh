@@ -62,7 +62,7 @@ class Mappinghandler{
         
 
         INLINEQUALIFIER
-        void NucleoideConverer(char* output, const char* input, int length);
+        void NucleoideConverer(char* output, std::string_view input);
 
 struct AlignerArguments{
     uint16_t flag=0;
