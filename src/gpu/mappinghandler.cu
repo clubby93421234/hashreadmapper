@@ -259,7 +259,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << "\t" // PNEXT
                 << "0"
                 << "\t"                           // TLEN
-                << std::string(mappingout.at(i).query) << "\t" // SEQ
+                << mappingout.at(i).query << "\t" // SEQ
                 << "*"
                 << "\t"           // QUAL
                 << samtag << "\t" // TAG
@@ -279,7 +279,7 @@ auto test = (programOptions->outputfile)+".SAM";
                 << "\t" // PNEXT
                 << "0"
                 << "\t"                           // TLEN
-                << std::string(mappingout.at(i).query) << "\t" // SEQ
+                << mappingout.at(i).query << "\t" // SEQ
                 << "*"
                 << "\t"           // QUAL
                 << mappingout.at(i).flag << "\t" // TAG
