@@ -722,6 +722,7 @@ moodmapped++;
                             _num_conversions++;
                         ali->sw_score_next_best -= 2;
                             ali->sw_score_next_best += aligner.getScore(_query.at(altPos + i),
+                            _ref.at(refPos + i));
                             ali->sw_score -= 2;
                             ali->sw_score += aligner.getScore(_query.at(altPos + i),
                              _ref.at(refPos + i));
