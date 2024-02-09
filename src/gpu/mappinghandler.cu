@@ -636,7 +636,8 @@ moodmapped++;
                         if (('T' == _ref.at(refPos + i) && 'A' == aa.rc_ref.at(refPos + i)) 
                         || ('A' == _ref.at(refPos + i) && 'T' == aa.rc_ref.at(refPos + i)))
                         {
-
+                            ali->sw_score_next_best-= aligner.getScore('T', _ref.at(refPos + i));
+                            ali->sw_score_next_best += aligner.getScore('C', _ref.at(refPos + i));
                             ali->sw_score -= aligner.getScore('T', _ref.at(refPos + i)); // substract false matching score
                             ali->sw_score += aligner.getScore('C', _ref.at(refPos + i)); // add corrected matching score
                         }
@@ -648,7 +649,8 @@ moodmapped++;
                         || ('G' == _ref.at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
-
+                            ali->sw_score_next_best -= aligner.getScore('T', 'T');                  // substract false matching score
+                            ali->sw_score_next_best += aligner.getScore('T', _ref.at(refPos + i));
                             ali->sw_score -= aligner.getScore('T', 'T');                  // substract false matching score
                             ali->sw_score += aligner.getScore('T', _ref.at(refPos + i)); // add corrected matching score
                         }
@@ -718,7 +720,8 @@ moodmapped++;
                         || ('G' == _ref.at(refPos + i) && 'C' == aa.rc_ref.at(refPos + i)))
                         {
                             _num_conversions++;
-
+                        ali->sw_score_next_best -= 2;
+                            ali->sw_score_next_best += aligner.getScore(_query.at(altPos + i),
                             ali->sw_score -= 2;
                             ali->sw_score += aligner.getScore(_query.at(altPos + i),
                              _ref.at(refPos + i));
@@ -748,9 +751,10 @@ moodmapped++;
 
                 Cigar cigi{ mappingout.at(i).alignments.at(0).cigar_string };
                 Cigar cigii{ mappingout.at(i).alignments.at(1).cigar_string };
-
+                            //to recalculate best sw score   
                 recalculateAlignmentScorefk(mappingout.at(i), cigi.getEntries(), 0);
                 recalculateAlignmentScorefk(mappingout.at(i), cigii.getEntries(), 1);
+
             }
             else {//ignore unmapped
                 continue;
@@ -758,7 +762,7 @@ moodmapped++;
         }
     };
 
-//    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
+    threadPool.parallelFor(pforHandle, start, mappingout.size(), comparefk);
 
     std::cout << "number of reads:" << mappingout.size() << "\n";
     std::cout << "mapped: " << moodmapped << "\n";
